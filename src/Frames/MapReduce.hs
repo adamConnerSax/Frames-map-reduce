@@ -30,16 +30,20 @@ in "map-reduce" style.  That is, the initial collection is split (rows are re-sh
 then grouped by that key and then that group is processed and optionally re-joined with the key, leaving you with a new collection.
 
 These operations are folds over the initial data.  But expressing them directly as folds is less clear than splitting them into their various
-components.  Here we have 3:
+components.  Here we have 4:
+
 (1) The "unpack" step @Foldable g => x -> g y@ which maps an item in the initial collection to a foldable of something else.
 This encompasses doing nothing (@g ~ Identity@ and @y ~ a@), filtering (@g ~ Maybe@) and something like R's "melt" function where each row
 of the input becomes several rows of a different set of columns.
+
 (2) The "assign" step @Ord k => y -> (k, c)@ or @(Hashable k, Eq k => y -> (k, c)@ which assigns each unpacked item to a group, keyed by the type k.  For frames that key will usually, but not always be a subset of your record.
-(2a) The "group" step which collects every assigned item by key into a group.
+
+(3) The "group" step which collects every assigned item by key into a group.
 map-reduce-folds is agnostic about how to do the collecting, grouping and what to group into. But the defaults, built into these wrappers,
 are to collect into a 'Data.Sequence.Seq', use a map (lazy and strict have similar performance) for the grouping step and to collect like items into lists.
 In the general case, we supply a function @Monoid d => c -> d@ to the "gatherer". Here that is specialized to @pure \@[]@. 
-(3) The "reduce" step @Monoid e => (k -> [c] -> e)@ which processes each grouped result, in a way which can depend on the value of the key.  The result of this
+
+(4) The "reduce" step @Monoid e => (k -> [c] -> e)@ which processes each grouped result, in a way which can depend on the value of the key.  The result of this
 reduction must be a monoid so that all the results can be packaged up. @e@ could itself be a container type, e.g.,  @[z]@ or @FrameRec xs@ etc.  
 
 We end up with a Control.Foldl.Fold x e.
