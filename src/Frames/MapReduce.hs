@@ -150,7 +150,7 @@ unpackGoodRows = MR.Unpack $ F.recMaybe . F.rcast
 assignKeysAndData
   :: forall ks cs rs
    . (ks F.⊆ rs, cs F.⊆ rs)
-  => MR.Assign (F.Record ks) (F.Record rs) (F.Record cs)
+  => MR.Assign 'Nothing (F.Record ks) (F.Record rs) (F.Record cs)
 assignKeysAndData = MR.assign (F.rcast @ks) (F.rcast @cs)
 {-# INLINABLE assignKeysAndData #-}
 
@@ -158,7 +158,7 @@ assignKeysAndData = MR.assign (F.rcast @ks) (F.rcast @cs)
 assignKeys
   :: forall ks rs
    . (ks F.⊆ rs)
-  => MR.Assign (F.Record ks) (F.Record rs) (F.Record rs)
+  => MR.Assign 'Nothing (F.Record ks) (F.Record rs) (F.Record rs)
 assignKeys = MR.assign (F.rcast @ks) id
 {-# INLINABLE assignKeys #-}
 
@@ -166,7 +166,7 @@ assignKeys = MR.assign (F.rcast @ks) id
 splitOnKeys
   :: forall ks rs cs
    . (ks F.⊆ rs, cs ~ F.RDeleteAll ks rs, cs F.⊆ rs)
-  => MR.Assign (F.Record ks) (F.Record rs) (F.Record cs)
+  => MR.Assign 'Nothing (F.Record ks) (F.Record rs) (F.Record cs)
 splitOnKeys = assignKeysAndData @ks @cs
 {-# INLINABLE splitOnKeys #-}
 
@@ -203,16 +203,10 @@ makeRecsWithKey makeRec reduceToY = fmap F.toFrame
 
 -- | 'mapReduceGatherFold' specialized to Frames.  Here the 'Gatherer' is left as an input so it can be specified by the user.
 mapReduceGF
-  :: ( ec e
-     , Functor g
-     , Functor (MR.MapFoldT mm x)
-     , Monoid e
-     , Monoid gt
-     , Foldable g
-     )
+  :: (ec e, Functor (MR.MapFoldT mm x), Monoid e, Monoid gt, Traversable g)
   => MR.Gatherer ec gt (F.Record ks) (F.Record cs) [F.Record cs] -- ^ a map-reduce-folds 'Gatherer' for gathering and grouping 
   -> MR.Unpack mm g x y
-  -> MR.Assign (F.Record ks) y (F.Record cs)
+  -> MR.Assign mm (F.Record ks) y (F.Record cs)
   -> MR.Reduce mm (F.Record ks) [] (F.Record cs) e
   -> MR.MapFoldT mm x e
 mapReduceGF frameGatherer unpacker assigner reducer = MR.mapGatherReduceFold
@@ -222,15 +216,14 @@ mapReduceGF frameGatherer unpacker assigner reducer = MR.mapGatherReduceFold
 -- | The most common map-reduce form and the simplest to use. Requires @(Hashable (Record ks), Eq (Record ks))@.
 -- Note that this is just a less polymorphic version of 'Control.MapReduce.Simple.basicListF`
 mapRListF
-  :: ( Functor g
-     , Functor (MR.MapFoldT mm x)
+  :: ( Functor (MR.MapFoldT mm x)
      , Monoid e
-     , Foldable g
+     , Traversable g
      , Hashable (F.Record ks)
      , Eq (F.Record ks)
      )
   => MR.Unpack mm g x y
-  -> MR.Assign (F.Record ks) y (F.Record cs)
+  -> MR.Assign mm (F.Record ks) y (F.Record cs)
   -> MR.Reduce mm (F.Record ks) [] (F.Record cs) e
   -> MR.MapFoldT mm x e
 mapRListF = MR.basicListF @Hashable --mapReduceGF (MR.defaultHashableGatherer pure)
@@ -238,14 +231,9 @@ mapRListF = MR.basicListF @Hashable --mapReduceGF (MR.defaultHashableGatherer pu
 -- | The most common map-reduce form and the simplest to use. Requires @Ord (Record ks)@
 -- Note that this is just a less polymorphic version of 'Control.MapReduce.Simple.basicListF` 
 mapRListFOrd
-  :: ( Functor g
-     , Functor (MR.MapFoldT mm x)
-     , Monoid e
-     , Foldable g
-     , Ord (F.Record ks)
-     )
+  :: (Traversable g, Functor (MR.MapFoldT mm x), Monoid e, Ord (F.Record ks))
   => MR.Unpack mm g x y
-  -> MR.Assign (F.Record ks) y (F.Record cs)
+  -> MR.Assign mm (F.Record ks) y (F.Record cs)
   -> MR.Reduce mm (F.Record ks) [] (F.Record cs) e
   -> MR.MapFoldT mm x e
 mapRListFOrd = mapReduceGF (MR.defaultOrdGatherer pure)
