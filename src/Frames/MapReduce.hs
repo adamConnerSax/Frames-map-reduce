@@ -203,16 +203,26 @@ makeRecsWithKey makeRec reduceToY = fmap F.toFrame
 
 -- | 'mapReduceGatherFold' specialized to Frames.  Here the 'Gatherer' is left as an input so it can be specified by the user.
 mapReduceGF
-  :: (ec e, Functor (MR.MapFoldT mm x), Monoid e, Monoid gt, Traversable g)
+  :: ( ec e
+     , Functor (MR.MapFoldT mm x)
+     , Monoid e
+     , Monoid gt
+     , Traversable g
+     , UAGMapFolds mm
+     , MapReduceF mm
+     )
   => MR.Gatherer ec gt (F.Record ks) (F.Record cs) [F.Record cs] -- ^ a map-reduce-folds 'Gatherer' for gathering and grouping 
   -> MR.Unpack mm g x y
   -> MR.Assign mm (F.Record ks) y (F.Record cs)
   -> MR.Reduce mm (F.Record ks) [] (F.Record cs) e
   -> MR.MapFoldT mm x e
-mapReduceGF frameGatherer unpacker assigner reducer = MR.mapGatherReduceFold
+mapReduceGF frameGatherer unpacker assigner reducer =
+  MR.mapReduceFold frameGatherer unpacker assigner reducer
+{-
+  MR.mapGatherReduceFold
   (MR.uagMapAllGatherEachFold frameGatherer unpacker assigner)
   reducer
-
+-}
 -- | The most common map-reduce form and the simplest to use. Requires @(Hashable (Record ks), Eq (Record ks))@.
 -- Note that this is just a less polymorphic version of 'Control.MapReduce.Simple.basicListF`
 mapRListF
@@ -221,17 +231,25 @@ mapRListF
      , Traversable g
      , Hashable (F.Record ks)
      , Eq (F.Record ks)
+     , UAGMapFolds mm
+     , MapReduceF mm
      )
   => MR.Unpack mm g x y
   -> MR.Assign mm (F.Record ks) y (F.Record cs)
   -> MR.Reduce mm (F.Record ks) [] (F.Record cs) e
   -> MR.MapFoldT mm x e
-mapRListF = MR.basicListF @Hashable --mapReduceGF (MR.defaultHashableGatherer pure)
+mapRListF = MR.basicListFold @Hashable --mapReduceGF (MR.defaultHashableGatherer pure)
 
 -- | The most common map-reduce form and the simplest to use. Requires @Ord (Record ks)@
 -- Note that this is just a less polymorphic version of 'Control.MapReduce.Simple.basicListF` 
 mapRListFOrd
-  :: (Traversable g, Functor (MR.MapFoldT mm x), Monoid e, Ord (F.Record ks))
+  :: ( Traversable g
+     , Functor (MR.MapFoldT mm x)
+     , Monoid e
+     , Ord (F.Record ks)
+     , UAGMapFolds mm
+     , MapReduceF mm
+     )
   => MR.Unpack mm g x y
   -> MR.Assign mm (F.Record ks) y (F.Record cs)
   -> MR.Reduce mm (F.Record ks) [] (F.Record cs) e
