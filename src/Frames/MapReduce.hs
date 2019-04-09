@@ -86,10 +86,10 @@ module Frames.MapReduce
   -- * Frame-specific re-adding of keys to mulitple results
   , makeRecsWithKey
   , makeRecsWithKeyM
+{-  
   -- * map-reduce-fold specialized to Frames
   , mapReduceFrameFold
   , mapReduceFrameFoldM
-{-
   , mapReduceHashableFrameListFold
   , mapReduceHashableFrameListFoldM
   , mapReduceOrdFrameListFold
@@ -101,7 +101,7 @@ module Frames.MapReduce
 where
 
 import qualified Control.MapReduce             as MR
-import           Control.MapReduce
+import           Control.MapReduce                 -- for re-export
 
 import qualified Control.Foldl                 as FL
 import qualified Data.Foldable                 as F
@@ -213,9 +213,9 @@ makeRecsWithKeyM makeRec reduceToY = fmap F.toFrame
   $ MR.reduceMMapWithKey addKey reduceToY
   where addKey k = fmap (V.rappend k . makeRec)
 {-# INLINABLE makeRecsWithKeyM #-}
-
+{-
 mapReduceFrameFold
-  :: (Monoid e, Monoid gt, Traversable g, Ord (F.Record ks))
+  :: (Monoid e, Traversable g, Ord (F.Record ks))
   => MR.Unpack x y
   -> MR.Assign (F.Record ks) y (F.Record cs)
   -> MR.Reduce (F.Record ks) (F.Record cs) e
@@ -225,7 +225,7 @@ mapReduceFrameFold unpacker assigner reducer =
 {-# INLINABLE mapReduceFrameFold #-}
 
 mapReduceFrameFoldM
-  :: (Monad m, Monoid e, Monoid gt, Traversable g, Ord (F.Record ks))
+  :: (Monad m, Monoid e, Traversable g, Ord (F.Record ks))
   => MR.UnpackM m x y
   -> MR.AssignM m (F.Record ks) y (F.Record cs)
   -> MR.ReduceM m (F.Record ks) (F.Record cs) e
@@ -233,7 +233,7 @@ mapReduceFrameFoldM
 mapReduceFrameFoldM unpacker assigner reducer =
   fmap (F.foldMap id) $ MR.mapReduceFoldM unpacker assigner reducer
 {-# INLINABLE mapReduceFrameFoldM #-}
-
+-}
 {-
 -- | The most common map-reduce form and the simplest to use. Requires @(Hashable (Record ks), Eq (Record ks))@.
 -- Note that this is just a less polymorphic version of 'Control.MapReduce.Simple.basicListF`
