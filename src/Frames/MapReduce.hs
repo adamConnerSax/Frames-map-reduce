@@ -180,7 +180,7 @@ reduceAndAddKey
   => (forall h . Foldable h => h x -> F.Record cs) -- ^ reduction step
   -> MR.Reduce (F.Record ks) x (F.FrameRec (ks V.++ cs))
 reduceAndAddKey process =
-  fmap (F.toFrame . pure @[]) $ MR.processAndRelabel process V.rappend
+  fmap (F.toFrame . pure @[]) $ MR.processAndLabel process V.rappend
 {-# INLINABLE reduceAndAddKey #-}
 
 -- | The common case where we reduce (via a fold) the data to a single row and then (re-)attach a key
@@ -188,8 +188,7 @@ foldAndAddKey
   :: (FI.RecVec ((ks V.++ cs)))
   => FL.Fold x (F.Record cs) -- ^ reduction fold
   -> MR.Reduce (F.Record ks) x (F.FrameRec (ks V.++ cs))
-foldAndAddKey fld =
-  fmap (F.toFrame . pure @[]) $ MR.foldAndRelabel fld V.rappend  -- is Frame a reasonably fast thing for many appends?
+foldAndAddKey fld = fmap (F.toFrame . pure @[]) $ MR.foldAndLabel fld V.rappend  -- is Frame a reasonably fast thing for many appends?
 {-# INLINABLE foldAndAddKey #-}
 
 -- | Transform a reduce which produces a container of results and a function from each result to a record
