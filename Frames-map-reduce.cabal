@@ -35,3 +35,17 @@ library
   hs-source-dirs:      src
   default-language:    Haskell2010
 
+executable AddRowsByLabel
+    main-is: AddRowsByLabel.hs
+    hs-source-dirs: examples
+    ghc-options: -Wall
+    build-depends:
+                  base,
+                  foldl,                  
+                  Frames,
+                  Frames-map-reduce -any,
+                  text >= 1.2.3 && < 1.3, 
+                  vinyl,
+                  random >= 1.1 && < 1.2,
+                  
+    default-language:    Haskell2010
