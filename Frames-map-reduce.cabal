@@ -8,6 +8,7 @@ description:         Frames-map-reduce provides some helpers for using the map-r
                      recombining key columns with other columns after reducing.
                      This package also provides some tools for building folds over records from folds over each column,
                      e.g, summing multiple numerical columns into a multi-column result.
+bug-reports:         https://github.com/adamConnerSax/Frames-map-reduce/issues                     
 license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Adam Conner-Sax
