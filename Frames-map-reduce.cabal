@@ -5,7 +5,7 @@ version:             0.1.0.0
 synopsis:            Frames wrapper for map-reduce-folds and some extra folds helpers.
 description:         Frames-map-reduce provides some helpers for using the map-reduce-folds library with vinyl records and Frames.
                      These include functions for filtering Frames, splitting records into key columns and data columns and
-                     recombining keys columns with other columns after reducing.
+                     recombining key columns with other columns after reducing.
                      This package also provides some tools for building folds over records from folds over each column,
                      e.g, summing multiple numerical columns into a multi-column result.
 license:             BSD-3-Clause
