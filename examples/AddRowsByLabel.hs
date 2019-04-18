@@ -29,7 +29,7 @@ unpack = FMR.unpackFilterOnField @Label (`elem` ["A", "B", "C"])
 assign = FMR.splitOnKeys @'[Label]
 
 -- sum the data columns and then re-attach the key
-reduce = FMR.foldAndAddKey $ FF.foldAllMonoid @Sum @'[Y, X]
+reduce = FMR.foldAndAddKey $ (FF.foldAllConstrained @Num @'[Y, X]) FL.sum
 
 -- put it all together, filter, group by label, sum the data cols and re-attach the key.
 -- Then turn the resulting list of Frames (each with only one Record in this case) into one Frame via (<>).

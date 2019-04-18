@@ -12,7 +12,7 @@ For example, given a Frame with three columns, a text column ```Label``` and two
 
 * unpack, filtering using ```unpackFilterOnField``` (with a type-application to specify the ```Label``` column), 
 * assign, grouping by ```Label``` and feeding the rest of the columns to reduce using ```splitOnKeys``` with a type-application to specify which columns are the key.
-* reduce by folding over the two remaining columns using the ```foldAllMonoid``` function. The type-application here specifies a newtype wrapper with the correct ```Monoid``` instance.  This last part is a little complex.  See the Frames.Folds modules for more details.
+* reduce by folding over the two remaining columns using the ```foldAllConstrained``` function. The type-application here specifies a constraint satisfied by all the columns being folded, and then the cols to fold.  This last part is a little complex.  See the Frames.Folds modules for more details.
 
 ```haskell
 {-# LANGUAGE TypeApplications  #-}
@@ -46,7 +46,7 @@ unpack = FMR.unpackFilterOnField @Label (`elem` ["A", "B", "C"])
 assign = FMR.splitOnKeys @'[Label]
 
 -- sum the data columns and then re-attach the key
-reduce = FMR.foldAndAddKey $ FF.foldAllMonoid @Sum @'[Y, X]
+reduce = FMR.foldAndAddKey $ (FF.foldAllConstrained @Num @'[Y, X]) FL.sum
 
 -- put it all together, filter, group by label, sum the data cols and re-attach the key.
 -- Then turn the resulting list of Frames (each with only one Record in this case) into one Frame via (<>).
@@ -76,9 +76,9 @@ createFrame n = do
           F.&: (randDbls !! (n + m))
           F.&: V.RNil
   return $ F.toFrame $ fmap oneRow [0 .. (n - 1)]
-```
+```  
 
-Note 
+
 _______
 
 

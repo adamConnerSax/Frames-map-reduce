@@ -25,77 +25,30 @@ License     : BSD-3-Clause
 Maintainer  : adam_conner_sax@yahoo.com
 Stability   : experimental
 
-map-reduce-folds provides types and helper functions for expressing folds over a container of things, e.g., rows of data,
-in "map-reduce" style.  That is, the initial collection is split (rows are re-shaped or filtered, for example), then assigned a key,
-then grouped by that key and then that group is processed and optionally re-joined with the key, leaving you with a new collection.
-
-These operations are folds over the initial data.  But expressing them directly as folds is less clear than splitting them into their various
-components.  Here we have 4:
-
-(1) The "unpack" step @Foldable g => x -> g y@ which maps an item in the initial collection to a foldable of something else.
-This encompasses doing nothing (@g ~ Identity@ and @y ~ a@), filtering (@g ~ Maybe@) and something like R's "melt" function where each row
-of the input becomes several rows of a different set of columns.
-
-(2) The "assign" step @Ord k => y -> (k, c)@ or @(Hashable k, Eq k => y -> (k, c)@ which assigns each unpacked item to a group, keyed by the type k.  For frames that key will usually, but not always be a subset of your record.
-
-(3) The "group" step which collects every assigned item by key into a group.
-map-reduce-folds is agnostic about how to do the collecting, grouping and what to group into. But the defaults, built into these wrappers,
-are to collect into a 'Data.Sequence.Seq', use a map (lazy and strict have similar performance) for the grouping step and to collect like items into lists.
-In the general case, we supply a function @Monoid d => c -> d@ to the "gatherer". Here that is specialized to @pure \@[]@. 
-
-(4) The "reduce" step @Monoid e => (k -> [c] -> e)@ which processes each grouped result, in a way which can depend on the value of the key.  The result of this
-reduction must be a monoid so that all the results can be packaged up. @e@ could itself be a container type, e.g.,  @[z]@ or @FrameRec xs@ etc.  
-
-We end up with a Control.Foldl.Fold x e.
-
-So, for example, imagine we have a Frame of rows, each having two columns ("Label",Text), ("X",Double) and we want to get the average value in the X column
-for every label:
-
-we have (NB: "foldAllConstrained" is from the Frames.Folds module, also in this package and 'mean' is a fold from the Control.Foldl package.)
->>> f1 = mapRListF noUnpack (splitOnKeys @'[Label]) (foldAndAddKey (foldAllConstrained @Num average)) :: Fold (FrameRec OurCols) (FrameRec OurCols)
-and performing this fold will give you one row per label, each with the average value of X for rows with that label.
-
-or (using 'filter' from map-reduce-folds)
->>> f2 = mapRListF (filter $ (> 2) . F.rgetField @X) (splitOnKeys @'[Label]) (foldAndAddKey (foldAllConstrained @Num average)) :: Fold (FrameRec OurCols) (FrameRec OurCols)
-will do the same, but only consider rows where the value in the X column is > 2.
-
-Because these are folds, they can be combined applicatively so
->> f3 = (,) <$> f1 <*> f2
-is also a fold, one that returns both results but only loops over the data once.
-
-If you are combining operations that differ only in the reduce step, you can combine applicatively there as well, saving the work of grouping a second time.  And if both of your reductions are themselves folds, you can loop over each resulting group only once as well, computing both results as you go.
-
-You may notice that the resulting folds are of type @MapFoldT mm x e@.  This is just a wrapper which allows us to
-manage non-monadic (@mm@ will be a type-level @Nothing@) and monadic (Monad m => @mm ~ ('Just m)) folds with one type and one
-set of functions.  Your unpack and reduce steps must match. So if your reduction step is monadic (uses random numbers, say), then the unpack step will
-need to be "generalized" to match and vice-versa.  See map-reduce-folds documentation for details.
+Frames-map-reduce provides helper functions for using <https://hackage.haskell.org/package/map-reduce-folds-0.1.0.0 map-reduce-folds>
+with <http://hackage.haskell.org/package/Frames Frames>.  Please see those packages for more details.
 -}
 module Frames.MapReduce
   (
-    -- * unpackers
+    -- * Unpackers
     unpackFilterRow
   , unpackFilterOnField
   , unpackGoodRows
-    -- * key assigners
+
+    -- * Assigners
   , assignKeysAndData
   , assignKeys
   , splitOnKeys
-  -- * Frame-specific re-adding of keys
+
+  -- * Reduce and Re-Attach Key Cols
   , reduceAndAddKey
   , foldAndAddKey
-  -- * Frame-specific re-adding of keys to mulitple results
+
+  -- * Re-Attach Key Cols
   , makeRecsWithKey
   , makeRecsWithKeyM
-{-  
-  -- * map-reduce-fold specialized to Frames
-  , mapReduceFrameFold
-  , mapReduceFrameFoldM
-  , mapReduceHashableFrameListFold
-  , mapReduceHashableFrameListFoldM
-  , mapReduceOrdFrameListFold
-  , mapReduceOrdFrameListFoldM
--}
-  -- * re-exports
+
+  -- * Re-Exports
   , module Control.MapReduce
   )
 where
@@ -127,12 +80,12 @@ instance (V.KnownField t, Hash.Hashable (V.Snd t), Hash.Hashable (F.Record rs), 
   hashWithSalt s r = s `Hash.hashWithSalt` (F.rgetField @t r) `Hash.hashWithSalt` (F.rcast @rs r)
   {-# INLINABLE hashWithSalt #-}
 
--- | filter rows 
+-- | Filter records using a function on the entire record. 
 unpackFilterRow
   :: (F.Record rs -> Bool) -> MR.Unpack (F.Record rs) (F.Record rs)
 unpackFilterRow test = MR.Filter test
 
--- | filter rows based on a condition on only one field in the row
+-- | Filter records based on a condition on only one field in the row.  Will usually require a Type Application to indicate which field.
 unpackFilterOnField
   :: forall t rs
    . (V.KnownField t, F.ElemOf rs t)
@@ -148,8 +101,8 @@ unpackGoodRows
   => MR.Unpack (F.Rec (Maybe F.:. F.ElField) rs) (F.Record cs)
 unpackGoodRows = MR.Unpack $ F.recMaybe . F.rcast
 
--- | Assign both keys and data cols.  Uses type applications to specify if they cannot be inferred.  Keys usually can't.  Data often can be from the functions
--- that follow
+-- | Assign both keys and data cols.  Uses type applications to specify them if they cannot be inferred.
+-- Keys usually can't. Data sometimes can.
 assignKeysAndData
   :: forall ks cs rs
    . (ks F.⊆ rs, cs F.⊆ rs)
@@ -157,7 +110,7 @@ assignKeysAndData
 assignKeysAndData = MR.assign (F.rcast @ks) (F.rcast @cs)
 {-# INLINABLE assignKeysAndData #-}
 
--- | Assign keys and leave all columns, including the keys, in the data passed to gather and reduce
+-- | Assign keys and leave all columns, including the keys, in the data passed to reduce.
 assignKeys
   :: forall ks rs
    . (ks F.⊆ rs)
@@ -165,7 +118,7 @@ assignKeys
 assignKeys = MR.assign (F.rcast @ks) id
 {-# INLINABLE assignKeys #-}
 
--- | Assign keys and leave the rest of the columns, excluding the keys, in the data passed to gather and reduce
+-- | Assign keys and leave the rest of the columns, excluding the keys, in the data passed to reduce.
 splitOnKeys
   :: forall ks rs cs
    . (ks F.⊆ rs, cs ~ F.RDeleteAll ks rs, cs F.⊆ rs)
@@ -173,7 +126,7 @@ splitOnKeys
 splitOnKeys = assignKeysAndData @ks @cs
 {-# INLINABLE splitOnKeys #-}
 
--- | The common case where we reduce the data to a single row and then (re-)attach a key
+-- | Reduce the data to a single row and then re-attach the key.
 reduceAndAddKey
   :: forall ks cs x
    . FI.RecVec ((ks V.++ cs))
@@ -183,7 +136,7 @@ reduceAndAddKey process =
   fmap (F.toFrame . pure @[]) $ MR.processAndLabel process V.rappend
 {-# INLINABLE reduceAndAddKey #-}
 
--- | The common case where we reduce (via a fold) the data to a single row and then (re-)attach a key
+-- | Reduce by folding the data to a single row and then re-attaching the key.
 foldAndAddKey
   :: (FI.RecVec ((ks V.++ cs)))
   => FL.Fold x (F.Record cs) -- ^ reduction fold
@@ -191,91 +144,26 @@ foldAndAddKey
 foldAndAddKey fld = fmap (F.toFrame . pure @[]) $ MR.foldAndLabel fld V.rappend  -- is Frame a reasonably fast thing for many appends?
 {-# INLINABLE foldAndAddKey #-}
 
--- | Transform a reduce which produces a container of results and a function from each result to a record
--- into a reduce which produces a FrameRec of the result records with the key re-attached
+-- | Transform a reduce which produces a container of results, with a function from each result to a record,
+-- into a reduce which produces a FrameRec of the result records with the key re-attached.
 makeRecsWithKey
   :: (Functor g, Foldable g, (FI.RecVec (ks V.++ as)))
-  => (y -> F.Record as)
-  -> MR.Reduce (F.Record ks) x (g y)
+  => (y -> F.Record as) -- ^ map a result to a record
+  -> MR.Reduce (F.Record ks) x (g y) -- ^ original reduce
   -> MR.Reduce (F.Record ks) x (F.FrameRec (ks V.++ as))
 makeRecsWithKey makeRec reduceToY = fmap F.toFrame
   $ MR.reduceMapWithKey addKey reduceToY
   where addKey k = fmap (V.rappend k . makeRec)
 {-# INLINABLE makeRecsWithKey #-}
 
+-- | Transform an effectful reduce which produces a container of results, with a function from each result to a record,
+-- into a reduce which produces a FrameRec of the result records with the key re-attached.
 makeRecsWithKeyM
   :: (Monad m, Functor g, Foldable g, (FI.RecVec (ks V.++ as)))
-  => (y -> F.Record as)
-  -> MR.ReduceM m (F.Record ks) x (g y)
+  => (y -> F.Record as) -- ^ map a result to a record
+  -> MR.ReduceM m (F.Record ks) x (g y) -- ^ original reduce
   -> MR.ReduceM m (F.Record ks) x (F.FrameRec (ks V.++ as))
 makeRecsWithKeyM makeRec reduceToY = fmap F.toFrame
   $ MR.reduceMMapWithKey addKey reduceToY
   where addKey k = fmap (V.rappend k . makeRec)
 {-# INLINABLE makeRecsWithKeyM #-}
-{-
-mapReduceFrameFold
-  :: (Monoid e, Traversable g, Ord (F.Record ks))
-  => MR.Unpack x y
-  -> MR.Assign (F.Record ks) y (F.Record cs)
-  -> MR.Reduce (F.Record ks) (F.Record cs) e
-  -> FL.Fold x e
-mapReduceFrameFold unpacker assigner reducer =
-  fmap (F.foldMap id) $ MR.mapReduceFold unpacker assigner reducer
-{-# INLINABLE mapReduceFrameFold #-}
-
-mapReduceFrameFoldM
-  :: (Monad m, Monoid e, Traversable g, Ord (F.Record ks))
-  => MR.UnpackM m x y
-  -> MR.AssignM m (F.Record ks) y (F.Record cs)
-  -> MR.ReduceM m (F.Record ks) (F.Record cs) e
-  -> FL.FoldM m x e
-mapReduceFrameFoldM unpacker assigner reducer =
-  fmap (F.foldMap id) $ MR.mapReduceFoldM unpacker assigner reducer
-{-# INLINABLE mapReduceFrameFoldM #-}
--}
-{-
--- | The most common map-reduce form and the simplest to use. Requires @(Hashable (Record ks), Eq (Record ks))@.
--- Note that this is just a less polymorphic version of 'Control.MapReduce.Simple.basicListF`
-mapReduceHashableFrameListFold
-  :: (Monoid e, Traversable g, Hashable (F.Record ks), Eq (F.Record ks))
-  => MR.Unpack g x y
-  -> MR.Assign (F.Record ks) y (F.Record cs)
-  -> MR.Reduce (F.Record ks) [] (F.Record cs) e
-  -> FL.Fold x e
-mapReduceHashableFrameListFold = MR.basicListFold @Hashable
-{-# INLINABLE mapReduceHashableFrameListFold #-}
-
-mapReduceHashableFrameListFoldM
-  :: ( Monad m
-     , Monoid e
-     , Traversable g
-     , Hashable (F.Record ks)
-     , Eq (F.Record ks)
-     )
-  => MR.UnpackM m g x y
-  -> MR.AssignM m (F.Record ks) y (F.Record cs)
-  -> MR.ReduceM m (F.Record ks) [] (F.Record cs) e
-  -> FL.FoldM m x e
-mapReduceHashableFrameListFoldM = MR.basicListFoldM @Hashable
-{-# INLINABLE mapReduceHashableFrameListFoldM #-}
-
--- | The most common map-reduce form and the simplest to use. Requires @Ord (Record ks)@
--- Note that this is just a less polymorphic version of 'Control.MapReduce.Simple.basicListF` 
-mapReduceOrdFrameListFold
-  :: (Traversable g, Monoid e, Ord (F.Record ks))
-  => MR.Unpack g x y
-  -> MR.Assign (F.Record ks) y (F.Record cs)
-  -> MR.Reduce (F.Record ks) [] (F.Record cs) e
-  -> FL.Fold x e
-mapReduceOrdFrameListFold = MR.basicListFold @Ord --mapReduceGF (MR.defaultOrdGatherer pure)
-{-# INLINABLE mapReduceOrdFrameListFold #-}
-
-mapReduceOrdFrameListFoldM
-  :: (Monad m, Traversable g, Monoid e, Ord (F.Record ks))
-  => MR.UnpackM m g x y
-  -> MR.AssignM m (F.Record ks) y (F.Record cs)
-  -> MR.ReduceM m (F.Record ks) [] (F.Record cs) e
-  -> FL.FoldM m x e
-mapReduceOrdFrameListFoldM = MR.basicListFoldM @Ord --mapReduceGF (MR.defaultOrdGatherer pure)
-{-# INLINABLE mapReduceOrdFrameListFoldM #-}
--}

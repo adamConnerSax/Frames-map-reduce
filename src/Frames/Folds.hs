@@ -24,19 +24,25 @@ Copyright   : (c) Adam Conner-Sax 2019
 License     : BSD
 Maintainer  : adam_conner_sax@yahoo.com
 Stability   : experimental
+
+Frames.Folds contains various helper functions designed to simplify folding over Frames/Vinyl records given some way of folding over each column.
 -}
 module Frames.Folds
   (
     -- * Types
     EndoFold
+
     -- ** Types to act as "interpretation functors" for records of folds
   , FoldEndo(..)
   , FoldRecord(..)
+
   -- * functions for building records of folds
   , recFieldF
+
   -- * functions for turning records of folds into folds of records
   , sequenceRecFold
   , sequenceEndoFolds
+
   -- * functions using constraints to extend an endo-fold across a record
   , foldAll
   , foldAllConstrained
