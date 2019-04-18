@@ -1,19 +1,25 @@
-cabal-version:       2.2.0
+cabal-version:       2.2
 
 name:                Frames-map-reduce
-version:             0.2.0.0
+version:             0.1.0.0
 synopsis:            Frames wrapper for map-reduce-folds and some extra folds helpers.
+description:         Frames-map-reduce provides some helpers for using the map-reduce-folds library with Frames.  These include functions for filtering Frames, splitting frames into key columns and data columns and recombining keys columns with other columns after reducing.  This package also provides some tools for building folds over frames from folds over each column, e.g, performing a sum of several numerical columns.                    
 license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Adam Conner-Sax
 maintainer:          adam_conner_sax@yahoo.com
-copyright:           (c) Adam Conner-Sax 2019
+copyright:           2019 Adam Conner-Sax
 category:            Data
 extra-source-files:  CHANGELOG.md    
 Build-type: Simple
-                     
+tested-with: GHC ==8.6.4 || ==8.6.2
+
+source-repository head
+    Type: git
+    Location: https://github.com/adamConnerSax/Frames-map-reduce                                     
+            
 library
-  ghc-options: -Wall -O2 -funbox-strict-fields
+  ghc-options: -Wall -funbox-strict-fields
   exposed-modules: Frames.Folds
                  , Frames.MapReduce
 
@@ -25,9 +31,7 @@ library
                  profunctors          >= 5.3 && < 5.4,
                  vinyl                >= 0.11.0 && < 0.12,
                  foldl                >= 1.4.5 && < 1.5,
-                 newtype              >= 0.2 && < 0.3,
-
-
+                 newtype              >= 0.2 && < 0.3
   hs-source-dirs:      src
   default-language:    Haskell2010
 
