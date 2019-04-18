@@ -4,14 +4,14 @@
 [![Hackage][hackage-badge]][hackage]
 [![Hackage Dependencies][hackage-deps-badge]][hackage-deps]
 
-This library contains some useful functions for using the [map-reduce-folds](https://hackage.haskell.org/package/map-reduce-folds-0.1.0.0) package with Frames from the [Frames](http://hackage.haskell.org/package/Frames).  Included, in Frames.MapReduce, are helpers for filtering Frames, splitting records into key and data columns and reattaching key columns after reducing.
+This library contains some useful functions for using the [map-reduce-folds](https://hackage.haskell.org/package/map-reduce-folds-0.1.0.0) package with Frames (containers of data rows) from the [Frames](http://hackage.haskell.org/package/Frames) package.  Included, in Frames.MapReduce, are helpers for filtering Frames, splitting records into key and data columns and reattaching key columns after reducing.
 
 Also included, in the Frames.Folds module, are some helpful functions for building folds of Frames from folds over each column, specified either individually or via a constraint on all the columns being folded over.
 
 For example, given a Frame with three columns, a text column ```Label``` and two columns, ```X``` and ```Y```, holding doubles, we
 
 * unpack, filtering using ```unpackFilterOnField``` (with a type-application to specify the ```Label``` column), 
-* assign, grouping by ```Label``` and feeding the rest of the columns to reduce using ```splitOnKeys``` with a type-application to specify which columns are the key.
+* assign, thus grouping by ```Label``` and feeding the rest of the columns to reduce using ```splitOnKeys``` with a type-application to specify which columns are the key.
 * reduce by folding over the two remaining columns using the ```foldAllConstrained``` function. The type-application here specifies a constraint satisfied by all the columns being folded, and then the cols to fold.  This last part is a little complex.  See the Frames.Folds modules for more details.
 
 ```haskell
@@ -48,8 +48,9 @@ assign = FMR.splitOnKeys @'[Label]
 -- sum the data columns and then re-attach the key
 reduce = FMR.foldAndAddKey $ (FF.foldAllConstrained @Num @'[Y, X]) FL.sum
 
--- put it all together, filter, group by label, sum the data cols and re-attach the key.
--- Then turn the resulting list of Frames (each with only one Record in this case) into one Frame via (<>).
+-- put it all together: filter, group by label, sum the data cols and re-attach the key.
+-- Then turn the resulting list of Frames (each with only one Record in this case) 
+-- into one Frame via (<>).
 mrFold = FMR.concatFold $ FMR.mapReduceFold unpack assign reduce
 
 main :: IO ()

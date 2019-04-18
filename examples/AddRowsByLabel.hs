@@ -31,8 +31,9 @@ assign = FMR.splitOnKeys @'[Label]
 -- sum the data columns and then re-attach the key
 reduce = FMR.foldAndAddKey $ (FF.foldAllConstrained @Num @'[Y, X]) FL.sum
 
--- put it all together, filter, group by label, sum the data cols and re-attach the key.
--- Then turn the resulting list of Frames (each with only one Record in this case) into one Frame via (<>).
+-- put it all together: filter, group by label, sum the data cols and re-attach the key.
+-- Then turn the resulting list of Frames (each with only one Record in this case)
+-- into one Frame via (<>).
 mrFold = FMR.concatFold $ FMR.mapReduceFold unpack assign reduce
 
 main :: IO ()
