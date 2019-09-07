@@ -98,12 +98,14 @@ main = do
   let result = FMR.fold mrFold f
   putStrLn $ (L.intercalate "\n" $ fmap show $ FL.fold FL.list result)
   let result' = FMR.fold mrFold' createHolyRows
-  putStrLn . L.intercalate "\n" $ fmap show $ FL.fold FL.list result'
+  putStrLn . unlines . fmap show $ FL.fold FL.list result'
 
 {- Output
-{label :-> "A", y :-> 1293.6893073755323, x :-> 1386.4314446405742}
-{label :-> "B", y :-> 1940.9402110282622, x :-> 2244.645291592506}
-{label :-> "C", y :-> 2009.8541388288395, x :-> 2128.7190606123568}
+{label :-> "A", y :-> 1577.3965303339942, x :-> 1507.286289962377}
+{label :-> "B", y :-> 1934.223021597267, x :-> 2135.9312483902577}
+{label :-> "C", y :-> 1528.6898777108415, x :-> 1810.5096765228654}
+{Just label :-> "A", Just x :-> 5.0, Just y :-> 2.0}
+{Just label :-> "Z", Just x :-> 5.0, Just y :-> 9.0}
 -}
 
 --- create the Frame
