@@ -1,7 +1,7 @@
 cabal-version:       2.2
 
 name:                Frames-map-reduce
-version:             0.1.0.2
+version:             0.2.0.0
 synopsis:            Frames wrapper for map-reduce-folds and some extra folds helpers.
 description:         Frames-map-reduce provides some helpers for using the map-reduce-folds library with vinyl records and Frames.
                      These include functions for filtering Frames, splitting records into key columns and data columns and
