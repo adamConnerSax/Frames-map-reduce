@@ -12,7 +12,9 @@ import qualified Data.List                     as L
 import           Data.Monoid                    ( Sum )
 import qualified Data.Text                     as T
 import qualified Data.Vinyl                    as V
-import  Data.Vinyl.Functor (Compose(..), (:.))
+import           Data.Vinyl.Functor             ( Compose(..)
+                                                , (:.)
+                                                )
 import qualified Frames                        as F
 import qualified Frames.CSV                    as F
 import qualified Frames.Folds                  as FF
@@ -62,7 +64,7 @@ assign'
   :: FMR.Assign
        (F.Rec (Maybe :. F.ElField) '[Label])
        (F.Rec (Maybe :. F.ElField) '[Label, X, Y])
-       ( F.Rec (Maybe :. F.ElField) '[X, Y] )
+       (F.Rec (Maybe :. F.ElField) '[X, Y])
 assign' = FMRM.splitOnKeys @'[Label]
 
 -- | Computes the sum of all `Just` elements
@@ -74,7 +76,7 @@ maybeSum = FL.Fold go Nothing id
       Just b' -> Just $ a' + b'
       Nothing -> a
     Nothing -> case b of
-      Just _ -> b
+      Just _  -> b
       Nothing -> Nothing
 {-# INLINABLE maybeSum #-}
 
@@ -83,14 +85,29 @@ reduce'
        (F.Rec (Maybe :. F.ElField) '[Label])
        (F.Rec (Maybe :. F.ElField) '[X, Y])
        (F.Rec (Maybe :. F.ElField) '[Label, X, Y])
-reduce' = FMRM.foldAndAddKey $ (FFM.foldAllConstrained @Num @'[X, Y]) maybeSum
+reduce' =
+  FMRM.foldAndAddKey $ (FFM.maybeFoldAllConstrained @Num @'[X, Y]) maybeSum
 
 -- mrFold' :: FMR.Fold (F.Rec (Maybe :. F.ElField) rs0) [F.Rec (Maybe :. F.ElField) rs0]
 mrFold'
   :: FMR.Fold
        (F.Rec (Maybe :. F.ElField) '[Label, X, Y])
        [F.Rec (Maybe :. F.ElField) '[Label, X, Y]]
-mrFold' =FMR.mapReduceFold unpack' assign' reduce'
+mrFold' = FMR.mapReduceFold unpack' assign' reduce'
+
+reduce''
+  :: FMR.Reduce
+       (F.Rec (Maybe :. F.ElField) '[Label])
+       (F.Rec (Maybe :. F.ElField) '[X, Y])
+       (F.Rec (Maybe :. F.ElField) '[Label, X, Y])
+reduce'' = FMRM.foldAndAddKey $ (FFM.foldAllConstrained @Num @'[X, Y]) FL.sum
+
+mrFold''
+  :: FMR.Fold
+       (F.Rec (Maybe :. F.ElField) '[Label, X, Y])
+       [F.Rec (Maybe :. F.ElField) '[Label, X, Y]]
+mrFold'' = FMR.mapReduceFold unpack' assign' reduce''
+
 
 main :: IO ()
 main = do
@@ -99,6 +116,8 @@ main = do
   putStrLn $ (L.intercalate "\n" $ fmap show $ FL.fold FL.list result)
   let result' = FMR.fold mrFold' createHolyRows
   putStrLn . unlines . fmap show $ FL.fold FL.list result'
+  let result'' = FMR.fold mrFold'' createHolyRows
+  putStrLn . unlines . fmap show $ FL.fold FL.list result''
 
 {- Output
 {label :-> "A", y :-> 1577.3965303339942, x :-> 1507.286289962377}
