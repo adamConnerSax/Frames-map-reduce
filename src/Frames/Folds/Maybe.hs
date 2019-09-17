@@ -216,7 +216,9 @@ foldAllConstrained
      )
   => (forall a . c a => FL.Fold a a)
   -> FL.Fold (F.Rec (Maybe :. ElField) rs) (F.Rec (Maybe :. ElField) rs)
-foldAllConstrained f = maybeFoldAllConstrained (fmap Just $ maybeFold f)
+foldAllConstrained f =
+  sequenceEndoFolds $ V.rpureConstrained @(ConstrainedField c)
+    (FoldEndo (fmap Just $ maybeFold f))
 {-# INLINABLE foldAllConstrained #-}
 
 maybeFoldAllConstrained
