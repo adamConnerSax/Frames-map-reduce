@@ -47,7 +47,8 @@ module Frames.Folds.Maybe
   -- * functions using constraints to extend an endo-fold across a record
   , foldAll
   , foldAllConstrained
-  -- , foldAllMonoid
+  , maybeFoldAllConstrained
+  , foldAllMonoid
   )
 where
 
