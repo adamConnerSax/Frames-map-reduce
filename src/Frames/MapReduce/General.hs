@@ -17,7 +17,7 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
-module Frames.MapReduce.Maybe where
+module Frames.MapReduce.General where
 import qualified Control.MapReduce             as MR
 import           Control.MapReduce                 -- for re-export
 
@@ -28,6 +28,8 @@ import qualified Data.List                     as L
 import           Data.Maybe                     ( isJust )
 import           Data.Monoid                    ( Monoid(..) )
 import           Data.Hashable                  ( Hashable )
+import           Data.Kind                      ( Type )
+import           GHC.TypeLits                   ( Symbol )
 
 import qualified Frames                        as F
 import           Frames                         ( (:.) )
@@ -37,28 +39,98 @@ import qualified Data.Vinyl                    as V
 import           Data.Vinyl                     ( ElField )
 import qualified Data.Vinyl.Functor            as V
 import qualified Data.Vinyl.TypeLevel          as V
+import qualified Data.Vinyl.SRec               as V
+import qualified Data.Vinyl.ARec               as V
 
-rgetMaybeField
-  :: forall t rs
-   . (V.KnownField t, F.ElemOf rs t)
-  => F.Rec (Maybe :. ElField) rs
-  -> Maybe (V.Snd t)
-rgetMaybeField = fmap V.getField . V.getCompose . V.rget @t
+
+{-
+rgetFieldG
+  :: forall f t rs
+   . (V.KnownField t, F.ElemOf rs t, V.FieldType (V.Fst t) rs ~ V.Snd t)
+  => (forall f rs. rt f 
+  -> rt (f :. ElField) rs
+  -> f (V.Snd t)
+rgetFieldG = fmap V.getField . V.getCompose . V.rgetf (V.Label @(V.Fst t))
+-}
+
+recGetField
+  :: forall t f rs
+   . (V.KnownField t, F.ElemOf rs t, Functor f)
+  => V.Rec (f :. ElField) rs
+  -> f (V.Snd t)
+recGetField = fmap V.getField . V.getCompose . V.rget @t -- (V.Label @(V.Fst t))
+
+arecGetField
+  :: forall t f rs
+   . (V.KnownField t, F.ElemOf rs t, Functor f)
+  => V.ARec (f :. ElField) rs
+  -> f (V.Snd t)
+arecGetField = fmap V.getField . V.getCompose . V.aget @t --(V.Label @(V.Fst t))
+
+srecGetField
+  :: forall t (f :: Type -> Type) rs
+   . ( V.KnownField t
+     , F.ElemOf rs t
+     , V.FieldOffset (f :. ElField) rs t
+     , Functor f
+     )
+  => V.SRec (f :. ElField) rs
+  -> f (V.Snd t)
+srecGetField = fmap V.getField . V.getCompose . V.sget @_ @t . V.getSRecNT --(V.Label @(V.Fst t))
+
+data RGetField t rt f where
+  RGetField :: (V.KnownField t, F.ElemOf rs t, Functor f) => (rt (f :. ElField) rs -> f (V.Snd t)) -> RGetField t rt f
+
+recGetFieldF
+  :: forall t f rs
+   . (V.KnownField t, Functor f, F.ElemOf rs t)
+  => RGetField t V.Rec f
+recGetFieldF = RGetField (recGetField @t @f @rs)
+
+arecGetFieldF
+  :: forall t f rs
+   . (V.KnownField t, Functor f, F.ElemOf rs t)
+  => RGetField t V.ARec f
+arecGetFieldF = RGetField (arecGetField @t @f @rs)
+
+srecGetFieldF
+  :: forall t f rs
+   . ( V.KnownField t
+     , Functor f
+     , F.ElemOf rs t
+     , V.FieldOffset (f :. ElField) rs t
+     )
+  => RGetField t V.SRec f
+srecGetFieldF = RGetField (srecGetField @t @f @rs)
+
+class RecGetFieldC t rt f where
+  rgetFieldF :: forall rs. ( V.KnownField t
+                           , Functor f
+                           , F.ElemOf rs t
+                           ) => rt (f :. ElField) rs -> f (V.Snd t)
+
+{-
+type family RemoveIdentity (a :: Type -> Type) :: Type -> Type
+type instance RemoveIdentity (Identity :. ElField) = ElField
+type instance RemoveIdentity a = a
+-}
 
 -- | This is only here so we can use hash maps for the grouping step.  This should properly be in Frames itself.
-instance Hash.Hashable (F.Rec (Maybe :. ElField)  '[]) where
+instance Hash.Hashable (rt (f :. ElField)  '[]) where
   hash = const 0
   {-# INLINABLE hash #-}
   hashWithSalt s = const s -- TODO: this seems BAD! Or not?
   {-# INLINABLE hashWithSalt #-}
 
 instance (V.KnownField t
-         , Hash.Hashable (V.Snd t)
-         , Hash.Hashable (F.Rec (Maybe :. ElField) rs)
-         , rs F.⊆ (t ': rs)) => Hash.Hashable (F.Rec (Maybe :. ElField) (t ': rs)) where
-  hashWithSalt s r = s `Hash.hashWithSalt` (rgetMaybeField @t r) `Hash.hashWithSalt` (F.rcast @rs r)
+         , Functor f
+         , RecGetFieldC t rt f
+         , Hash.Hashable (f (V.Snd t))
+         , Hash.Hashable (rt (f :. ElField) rs)
+         , rs F.⊆ (t ': rs)) => Hash.Hashable (rt (f :. ElField) (t ': rs)) where
+  hashWithSalt s r = s `Hash.hashWithSalt` (rgetFieldF @t r) `Hash.hashWithSalt` (F.rcast @rs r)
   {-# INLINABLE hashWithSalt #-}
-
+{-
 -- | Don't do anything 
 unpackNoOp
   :: MR.Unpack (F.Rec (Maybe :. ElField) rs) (F.Rec (Maybe :. ElField) rs)
@@ -73,7 +145,7 @@ unpackFilterRow test = MR.Filter test
 -- | Filter records based on a condition on only one field in the row.  Will usually require a Type Application to indicate which field.
 unpackFilterOnField
   :: forall t rs
-   . (V.KnownField t, F.ElemOf rs t)
+   . (V.KnownField t, F.ElemOf rs t, V.FieldType (V.Fst t) rs ~ V.Snd t)
   => (Maybe (V.Snd t) -> Bool)
   -> MR.Unpack (F.Rec (Maybe :. ElField) rs) (F.Rec (Maybe :. ElField) rs)
 unpackFilterOnField test = unpackFilterRow (test . rgetMaybeField @t)
@@ -172,3 +244,4 @@ makeRecsWithKeyM
 makeRecsWithKeyM makeRec reduceToY = MR.reduceMMapWithKey addKey reduceToY
   where addKey k = fmap (V.rappend k . makeRec)
 {-# INLINABLE makeRecsWithKeyM #-}
+-}

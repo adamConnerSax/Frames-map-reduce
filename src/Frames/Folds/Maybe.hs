@@ -108,11 +108,7 @@ recFieldF fld fromRec =
 -- is just retrieving the value in a field.
 fieldToFieldFold
   :: forall x y rs
-   . ( V.KnownField x
-     , V.KnownField y
-     , F.ElemOf rs x
-     , V.FieldType (V.Fst x) rs ~ V.Snd x
-     )
+   . (V.KnownField x, V.KnownField y, F.ElemOf rs x)
   => FL.Fold (V.Snd x) (V.Snd y) -- ^ the fold to be wrapped
   -> FoldRecord (Maybe :. ElField) rs y -- ^ the wrapped fold
 fieldToFieldFold fld = recFieldF fld (rgetMaybeField @x)
