@@ -73,9 +73,6 @@ import           Frames                         ( (:.) )
 import qualified Frames.Melt                   as F
 
 
--- | A Type synonym for folds like sum or, often, average.
---type EndoFold a = FL.Fold a a
-
 -- | Turn and EndoFold (Maybe a) into an EndoFold ((Maybe :. ElField) '(s, a))
 fieldFold
   :: (V.KnownField t, a ~ V.Snd t)
@@ -87,9 +84,6 @@ fieldFold =
 
 -- | Wrapper for Endo-folds of the field types of ElFields
 newtype FoldEndo t = FoldEndo { unFoldEndo :: EndoFold (Maybe (V.Snd t)) }
-
--- | Wrapper for endo-folds on an interpretation f.  Usually f ~ ElField 
---newtype FoldFieldEndo f a = FoldFieldEndo { unFoldFieldEndo :: EndoFold (f a) } -- type FoldFieldEndo f a = FoldEndo (f a)
 
 -- | Wrapper for folds from a record to an interpreted field.  Usually f ~ ElField
 newtype FoldRecord f rs a = FoldRecord { unFoldRecord :: FL.Fold (F.Rec (Maybe :. ElField) rs) (f a) }
@@ -222,9 +216,7 @@ foldAllConstrained
      )
   => (forall a . c a => FL.Fold a a)
   -> FL.Fold (F.Rec (Maybe :. ElField) rs) (F.Rec (Maybe :. ElField) rs)
-foldAllConstrained f =
-  sequenceEndoFolds $ V.rpureConstrained @(ConstrainedField c)
-    (FoldEndo (fmap Just $ maybeFold f))
+foldAllConstrained f = maybeFoldAllConstrained (fmap Just $ maybeFold f)
 {-# INLINABLE foldAllConstrained #-}
 
 maybeFoldAllConstrained
@@ -240,16 +232,6 @@ maybeFoldAllConstrained f =
   sequenceEndoFolds $ V.rpureConstrained @(ConstrainedField c) (FoldEndo f)
 {-# INLINABLE maybeFoldAllConstrained #-}
 
-{-
--- | Given a monoid-wrapper, e.g., Sum, and functions to wrap and unwrap, we can produce an endo-fold on a
-monoidWrapperToFold
-   :: forall f a . (N.Newtype (f a) a, Monoid (f a)) => FL.Fold a a
-monoidWrapperToFold = FL.Fold (\w a -> N.pack a <> w) (mempty @(f a)) N.unpack -- is this the correct order in (<>) ?
-{-# INLINABLE monoidWrapperToFold #-}
-
--- class (N.Newtype (f a) a, Monoid (f a)) => MonoidalField f a
--- instance (N.Newtype (f a) a, Monoid (f a)) => MonoidalField f a
--}
 -- | Given a monoid-wrapper, e.g., Sum, apply the derived endo-fold to all fields of a record
 -- This is strictly less powerful than foldAllConstrained but might be simpler to use in some cases
 foldAllMonoid
