@@ -17,7 +17,7 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
-module Frames.MapReduce.Maybe where 
+module Frames.MapReduce.Maybe where
 import qualified Control.MapReduce             as MR
 import           Control.MapReduce                 -- for re-export
 
@@ -25,24 +25,25 @@ import qualified Control.Foldl                 as FL
 import qualified Data.Foldable                 as F
 import qualified Data.Hashable                 as Hash
 import qualified Data.List                     as L
-import           Data.Maybe                     (isJust)
+import           Data.Maybe                     ( isJust )
 import           Data.Monoid                    ( Monoid(..) )
 import           Data.Hashable                  ( Hashable )
 
 import qualified Frames                        as F
-import           Frames                         ((:.))
+import           Frames                         ( (:.) )
 import qualified Frames.Melt                   as F
 import qualified Frames.InCore                 as FI
 import qualified Data.Vinyl                    as V
-import           Data.Vinyl                     (ElField)
+import           Data.Vinyl                     ( ElField )
 import qualified Data.Vinyl.Functor            as V
 import qualified Data.Vinyl.TypeLevel          as V
 
-getMaybeField :: forall t rs. (V.KnownField t
-                              , F.ElemOf rs t
-                              , V.FieldType (V.Fst t) rs ~ V.Snd t)
-              => F.Rec (Maybe :. ElField) rs -> Maybe (V.Snd t)
-getMaybeField = fmap V.getField . V.getCompose . V.rgetf (V.Label @(V.Fst t))              
+rgetMaybeField
+  :: forall t rs
+   . (V.KnownField t, F.ElemOf rs t, V.FieldType (V.Fst t) rs ~ V.Snd t)
+  => F.Rec (Maybe :. ElField) rs
+  -> Maybe (V.Snd t)
+rgetMaybeField = fmap V.getField . V.getCompose . V.rgetf (V.Label @(V.Fst t))
 
 -- | This is only here so we can use hash maps for the grouping step.  This should properly be in Frames itself.
 instance Hash.Hashable (F.Rec (Maybe :. ElField)  '[]) where
@@ -55,12 +56,12 @@ instance (V.KnownField t
          , Hash.Hashable (V.Snd t)
          , Hash.Hashable (F.Rec (Maybe :. ElField) rs)
          , rs F.⊆ (t ': rs)) => Hash.Hashable (F.Rec (Maybe :. ElField) (t ': rs)) where
-  hashWithSalt s r = s `Hash.hashWithSalt` (getMaybeField @t r) `Hash.hashWithSalt` (F.rcast @rs r)
+  hashWithSalt s r = s `Hash.hashWithSalt` (rgetMaybeField @t r) `Hash.hashWithSalt` (F.rcast @rs r)
   {-# INLINABLE hashWithSalt #-}
 
 -- | Don't do anything 
 unpackNoOp
-  :: MR.Unpack (F.Rec (Maybe :. ElField ) rs) (F.Rec (Maybe :. ElField ) rs)
+  :: MR.Unpack (F.Rec (Maybe :. ElField) rs) (F.Rec (Maybe :. ElField) rs)
 unpackNoOp = MR.Filter (const True)
 
 -- | Filter records using a function on the entire record. 
@@ -72,13 +73,10 @@ unpackFilterRow test = MR.Filter test
 -- | Filter records based on a condition on only one field in the row.  Will usually require a Type Application to indicate which field.
 unpackFilterOnField
   :: forall t rs
-   . (V.KnownField t
-     , F.ElemOf rs t
-     , V.FieldType (V.Fst t) rs ~ V.Snd t
-     )
+   . (V.KnownField t, F.ElemOf rs t, V.FieldType (V.Fst t) rs ~ V.Snd t)
   => (Maybe (V.Snd t) -> Bool)
   -> MR.Unpack (F.Rec (Maybe :. ElField) rs) (F.Rec (Maybe :. ElField) rs)
-unpackFilterOnField test = unpackFilterRow (test . getMaybeField @t)
+unpackFilterOnField test = unpackFilterRow (test . rgetMaybeField @t)
 
 -- | An unpack step which specifies a subset of columns, cs,
 -- (via a type-application) and then filters a @Rec (Maybe :. Elfield) rs@
@@ -94,7 +92,10 @@ unpackGoodRows = unpackFilterRow (isJust . F.recMaybe . F.rcast @cs)
 assignKeysAndData
   :: forall ks cs rs
    . (ks F.⊆ rs, cs F.⊆ rs)
-  => MR.Assign (F.Rec (Maybe :. ElField ) ks) (F.Rec (Maybe :. ElField ) rs) (F.Rec (Maybe :. ElField )cs)
+  => MR.Assign
+       (F.Rec (Maybe :. ElField) ks)
+       (F.Rec (Maybe :. ElField) rs)
+       (F.Rec (Maybe :. ElField) cs)
 assignKeysAndData = MR.assign (F.rcast @ks) (F.rcast @cs)
 {-# INLINABLE assignKeysAndData #-}
 
@@ -102,7 +103,10 @@ assignKeysAndData = MR.assign (F.rcast @ks) (F.rcast @cs)
 splitOnKeys
   :: forall ks rs cs
    . (ks F.⊆ rs, cs ~ F.RDeleteAll ks rs, cs F.⊆ rs)
-  => MR.Assign (F.Rec (Maybe :. ElField ) ks) (F.Rec (Maybe :. ElField ) rs) (F.Rec (Maybe :. ElField ) cs)
+  => MR.Assign
+       (F.Rec (Maybe :. ElField) ks)
+       (F.Rec (Maybe :. ElField) rs)
+       (F.Rec (Maybe :. ElField) cs)
 splitOnKeys = assignKeysAndData @ks @cs
 {-# INLINABLE splitOnKeys #-}
 
@@ -110,7 +114,10 @@ splitOnKeys = assignKeysAndData @ks @cs
 assignKeys
   :: forall ks rs
    . (ks F.⊆ rs)
-  => MR.Assign (F.Rec (Maybe :. ElField ) ks) (F.Rec (Maybe :. ElField ) rs) (F.Rec (Maybe :. ElField ) rs)
+  => MR.Assign
+       (F.Rec (Maybe :. ElField) ks)
+       (F.Rec (Maybe :. ElField) rs)
+       (F.Rec (Maybe :. ElField) rs)
 assignKeys = MR.assign (F.rcast @ks) id
 {-# INLINABLE assignKeys #-}
 
@@ -119,16 +126,22 @@ reduceAndAddKey
   :: forall ks cs x
    . FI.RecVec ((ks V.++ cs))
   => (forall h . Foldable h => h x -> F.Rec (Maybe :. ElField) cs) -- ^ reduction step
-  -> MR.Reduce (F.Rec (Maybe :. ElField) ks) x (F.Rec (Maybe :. ElField) (ks V.++ cs))
+  -> MR.Reduce
+       (F.Rec (Maybe :. ElField) ks)
+       x
+       (F.Rec (Maybe :. ElField) (ks V.++ cs))
 reduceAndAddKey process = MR.processAndLabel process V.rappend
 {-# INLINABLE reduceAndAddKey #-}
 
 -- | Reduce by folding the data to a single row and then re-attaching the key.
 foldAndAddKey
   :: (FI.RecVec ((ks V.++ cs)))
-  => FL.Fold x (F.Rec (Maybe :. ElField ) cs) -- ^ reduction fold
-  -> MR.Reduce (F.Rec (Maybe :. ElField ) ks) x (F.Rec (Maybe :. ElField ) (ks V.++ cs))
-foldAndAddKey fld = MR.foldAndLabel fld V.rappend 
+  => FL.Fold x (F.Rec (Maybe :. ElField) cs) -- ^ reduction fold
+  -> MR.Reduce
+       (F.Rec (Maybe :. ElField) ks)
+       x
+       (F.Rec (Maybe :. ElField) (ks V.++ cs))
+foldAndAddKey fld = MR.foldAndLabel fld V.rappend
 {-# INLINABLE foldAndAddKey #-}
 
 -- | Transform a reduce which produces a container of results, with a function from each result to a record,
@@ -137,7 +150,10 @@ makeRecsWithKey
   :: (Functor g, Foldable g, (FI.RecVec (ks V.++ as)))
   => (y -> F.Rec (Maybe :. ElField) as) -- ^ map a result to a record
   -> MR.Reduce (F.Rec (Maybe :. ElField) ks) x (g y) -- ^ original reduce
-  -> MR.Reduce (F.Rec (Maybe :. ElField) ks) x (g (F.Rec (Maybe :. ElField) (ks V.++ as)))
+  -> MR.Reduce
+       (F.Rec (Maybe :. ElField) ks)
+       x
+       (g (F.Rec (Maybe :. ElField) (ks V.++ as)))
 makeRecsWithKey makeRec reduceToY = MR.reduceMapWithKey addKey reduceToY
   where addKey k = fmap (V.rappend k . makeRec)
 {-# INLINABLE makeRecsWithKey #-}
@@ -148,7 +164,11 @@ makeRecsWithKeyM
   :: (Monad m, Functor g, Foldable g, (FI.RecVec (ks V.++ as)))
   => (y -> F.Rec (Maybe :. ElField) as) -- ^ map a result to a record
   -> MR.ReduceM m (F.Rec (Maybe :. ElField) ks) x (g y) -- ^ original reduce
-  -> MR.ReduceM m (F.Rec (Maybe :. ElField) ks) x (g (F.Rec (Maybe :. ElField) (ks V.++ as)))
-makeRecsWithKeyM makeRec reduceToY =  MR.reduceMMapWithKey addKey reduceToY
+  -> MR.ReduceM
+       m
+       (F.Rec (Maybe :. ElField) ks)
+       x
+       (g (F.Rec (Maybe :. ElField) (ks V.++ as)))
+makeRecsWithKeyM makeRec reduceToY = MR.reduceMMapWithKey addKey reduceToY
   where addKey k = fmap (V.rappend k . makeRec)
 {-# INLINABLE makeRecsWithKeyM #-}

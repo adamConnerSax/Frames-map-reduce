@@ -34,10 +34,12 @@ module Frames.Folds
 
     -- ** Types to act as "interpretation functors" for records of folds
   , FoldEndo(..)
+  , FoldFieldEndo(..)
   , FoldRecord(..)
 
   -- * functions for building records of folds
   , recFieldF
+  , fieldToFieldFold
 
   -- * functions for turning records of folds into folds of records
   , sequenceRecFold
@@ -47,6 +49,10 @@ module Frames.Folds
   , foldAll
   , foldAllConstrained
   , foldAllMonoid
+
+  -- * for generalizing
+  , monoidWrapperToFold
+  , MonoidalField
   )
 where
 
