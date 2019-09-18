@@ -18,6 +18,7 @@
 {-# LANGUAGE UndecidableInstances  #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
 module Frames.MapReduce.General where
+
 import qualified Control.MapReduce             as MR
 import           Control.MapReduce                 -- for re-export
 
@@ -194,6 +195,15 @@ unpackFilterOnField
   => (f (V.Snd t) -> Bool)
   -> MR.Unpack (record (f :. ElField) rs) (record (f :. ElField) rs)
 unpackFilterOnField test = unpackFilterRow (test . rgetFieldF @t)
+
+unpackFilterOnGoodField
+  :: forall t rs record f
+   . (Functor f, V.KnownField t, F.ElemOf rs t, RecGetFieldC t record f rs)
+  => (forall a . f a -> Maybe a)
+  -> (V.Snd t -> Bool)
+  -> MR.Unpack (record (f :. ElField) rs) (record (f :. ElField) rs)
+unpackFilterOnGoodField toMaybe testValue =
+  let test' = (maybe False testValue) . toMaybe in unpackFilterOnField @t test'
 
 -- | An unpack step which specifies a subset of columns, cs,
 -- (via a type-application) and then filters a @record (Maybe :. Elfield) rs@
