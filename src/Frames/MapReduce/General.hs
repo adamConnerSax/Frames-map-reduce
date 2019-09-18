@@ -44,81 +44,24 @@ import qualified Data.Vinyl.SRec               as V
 import qualified Data.Vinyl.ARec               as V
 import qualified Foreign.Storable              as FS
 
-{-
-rgetFieldG
-  :: forall f t rs
-   . (V.KnownField t, F.ElemOf rs t, V.FieldType (V.Fst t) rs ~ V.Snd t)
-  => (forall f rs. record f 
-  -> record (f :. ElField) rs
-  -> f (V.Snd t)
-rgetFieldG = fmap V.getField . V.getCompose . V.rgetf (V.Label @(V.Fst t))
--}
-
-recGetField
-  :: forall t f rs
-   . (V.KnownField t, F.ElemOf rs t, Functor f)
-  => V.Rec (f :. ElField) rs
-  -> f (V.Snd t)
-recGetField = fmap V.getField . V.getCompose . V.rget @t -- (V.Label @(V.Fst t))
-
-arecGetField
-  :: forall t f rs
-   . (V.KnownField t, F.ElemOf rs t, Functor f)
-  => V.ARec (f :. ElField) rs
-  -> f (V.Snd t)
-arecGetField = fmap V.getField . V.getCompose . V.aget @t --(V.Label @(V.Fst t))
-
-srecGetField
-  :: forall t (f :: Type -> Type) rs
-   . ( V.KnownField t
-     , F.ElemOf rs t
-     , V.FieldOffset (f :. ElField) rs t
-     , Functor f
-     )
-  => V.SRec (f :. ElField) rs
-  -> f (V.Snd t)
-srecGetField = fmap V.getField . V.getCompose . V.sget @_ @t . V.getSRecNT --(V.Label @(V.Fst t))
-
-data RGetField t record f where
-  RGetField :: (V.KnownField t, F.ElemOf rs t, Functor f) => (record (f :. ElField) rs -> f (V.Snd t)) -> RGetField t record f
-
-recGetFieldF
-  :: forall t f rs
-   . (V.KnownField t, Functor f, F.ElemOf rs t)
-  => RGetField t V.Rec f
-recGetFieldF = RGetField (recGetField @t @f @rs)
-
-arecGetFieldF
-  :: forall t f rs
-   . (V.KnownField t, Functor f, F.ElemOf rs t)
-  => RGetField t V.ARec f
-arecGetFieldF = RGetField (arecGetField @t @f @rs)
-
-srecGetFieldF
-  :: forall t f rs
-   . ( V.KnownField t
-     , Functor f
-     , F.ElemOf rs t
-     , V.FieldOffset (f :. ElField) rs t
-     )
-  => RGetField t V.SRec f
-srecGetFieldF = RGetField (srecGetField @t @f @rs)
-
 class RecGetFieldC t record f rs where
+  rgetF ::  ( V.KnownField t
+            , F.ElemOf rs t
+            ) => record (f :. ElField) rs -> (f :. ElField) t
   rgetFieldF :: ( V.KnownField t
                 , Functor f
                 , F.ElemOf rs t
                 ) => record (f :. ElField) rs -> f (V.Snd t)
-
+  rgetFieldF = fmap V.getField . V.getCompose . rgetF @t @record @f @rs
 
 instance RecGetFieldC t V.Rec f rs where
-  rgetFieldF = recGetField @t
+  rgetF = V.rget @t
 
 instance RecGetFieldC t V.ARec f rs where
-  rgetFieldF = arecGetField @t
+  rgetF = V.aget @t
 
 instance (V.FieldOffset (f :. ElField) rs t) => RecGetFieldC t V.SRec f rs where
-  rgetFieldF = srecGetField @t @f @rs
+  rgetF = V.sget @_ @t . V.getSRecNT --srecGetField @t @f @rs
 
 class RCastC rs ss record f  where
   rcastF :: record (f :. ElField) ss -> record (f :. ElField) rs
