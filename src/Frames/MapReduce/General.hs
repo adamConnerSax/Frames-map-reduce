@@ -98,11 +98,6 @@ instance (V.NatToInt (V.RLength rs)
          , V.RPureConstrained (V.IndexableField rs) rs) => IsoRec rs V.ARec f where
   toRec = V.fromARec
   fromRec = V.toARec
-{-
-type family RemoveIdentity (a :: Type -> Type) :: Type -> Type
-type instance RemoveIdentity (Identity :. ElField) = ElField
-type instance RemoveIdentity a = a
--}
 
 -- | This is only here so we can use hash maps for the grouping step.  This should properly be in Frames itself.
 instance Hash.Hashable (record (f :. ElField)  '[]) where
@@ -217,11 +212,11 @@ foldAndAddKey
      , IsoRec (ks V.++ cs) record f
      , FI.RecVec ((ks V.++ cs))
      )
-  => FL.Fold x (F.Rec (Maybe :. ElField) cs) -- ^ reduction fold
+  => FL.Fold x (record (f :. ElField) cs) -- ^ reduction fold
   -> MR.Reduce
-       (F.Rec (Maybe :. ElField) ks)
+       (record (f :. ElField) ks)
        x
-       (F.Rec (Maybe :. ElField) (ks V.++ cs))
+       (record (f :. ElField) (ks V.++ cs))
 foldAndAddKey fld =
   MR.foldAndLabel fld (\k y -> fromRec (toRec k `V.rappend` toRec y))
 {-# INLINABLE foldAndAddKey #-}
