@@ -68,6 +68,12 @@ import qualified Frames.Melt                   as F
 import qualified Frames.InCore                 as FI
 import qualified Data.Vinyl                    as V
 import qualified Data.Vinyl.TypeLevel          as V
+import qualified Data.Vinyl.Functor            as V
+import           Data.Coerce                    ( coerce )
+
+-- | coercion from the generalized form
+coerceRecord :: V.RMap rs => V.Rec (V.Identity V.:. V.ElField) rs -> F.Record rs
+coerceRecord = V.rmap coerce
 
 -- | This is only here so we can use hash maps for the grouping step.  This should properly be in Frames itself.
 instance Hash.Hashable (F.Record '[]) where
