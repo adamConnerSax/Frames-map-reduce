@@ -36,6 +36,10 @@ module Frames.Folds.General
   , FoldEndo(..)
   , FoldRecord(..)
 
+  -- * classes
+  , EndoFieldFoldsToRecordFolds
+  , ConstrainedField
+
   -- * functions for building records of folds
   , recFieldF
   , fieldToFieldFold

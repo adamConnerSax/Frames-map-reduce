@@ -43,28 +43,6 @@ import           Data.Vinyl                     ( ElField )
 import qualified Data.Vinyl.Functor            as V
 import qualified Data.Vinyl.TypeLevel          as V
 
-
-rgetMaybeField
-  :: forall t rs
-   . (V.KnownField t, F.ElemOf rs t)
-  => F.Rec (Maybe :. ElField) rs
-  -> Maybe (V.Snd t)
-rgetMaybeField = fmap V.getField . V.getCompose . V.rget @t
-{-
--- | This is only here so we can use hash maps for the grouping step.  This should properly be in Frames itself.
-instance Hash.Hashable (F.Rec (Maybe :. ElField)  '[]) where
-  hash = const 0
-  {-# INLINABLE hash #-}
-  hashWithSalt s = const s -- TODO: this seems BAD! Or not?
-  {-# INLINABLE hashWithSalt #-}
-
-instance (V.KnownField t
-         , Hash.Hashable (V.Snd t)
-         , Hash.Hashable (F.Rec (Maybe :. ElField) rs)
-         , rs F.⊆ (t ': rs)) => Hash.Hashable (F.Rec (Maybe :. ElField) (t ': rs)) where
-  hashWithSalt s r = s `Hash.hashWithSalt` (rgetMaybeField @t r) `Hash.hashWithSalt` (F.rcast @rs r)
-  {-# INLINABLE hashWithSalt #-}
--}
 -- | Don't do anything 
 unpackNoOp
   :: MR.Unpack (record (Maybe :. ElField) rs) (record (Maybe :. ElField) rs)
