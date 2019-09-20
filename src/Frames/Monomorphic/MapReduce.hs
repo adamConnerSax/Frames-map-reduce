@@ -18,8 +18,8 @@
 {-# LANGUAGE InstanceSigs          #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
 {-|
-Module      : Frames.MapReduce
-Description : Helpers for using the map-reduce-folds package with Frames
+Module      : Frames.Monomorphic.MapReduce
+Description : Helpers for using the map-reduce-folds package with Frames.  Monomorphic in record and interpretation functor.
 Copyright   : (c) Adam Conner-Sax 2019
 License     : BSD-3-Clause
 Maintainer  : adam_conner_sax@yahoo.com
@@ -28,7 +28,7 @@ Stability   : experimental
 Frames-map-reduce provides helper functions for using <https://hackage.haskell.org/package/map-reduce-folds-0.1.0.0 map-reduce-folds>
 with <http://hackage.haskell.org/package/Frames Frames>.  Please see those packages for more details.
 -}
-module Frames.MapReduce
+module Frames.Monomorphic.MapReduce
   (
     -- * Unpackers
     unpackFilterRow
@@ -47,10 +47,6 @@ module Frames.MapReduce
   -- * Re-Attach Key Cols
   , makeRecsWithKey
   , makeRecsWithKeyM
-
-  -- * coercion helpers for (Rec (Identity :. ElField) rs <-> Rec ElField rs)
-  , coerceToRecord
-  , coerceFromRecord
 
   -- * Re-Exports
   , module Control.MapReduce
@@ -74,16 +70,6 @@ import qualified Data.Vinyl                    as V
 import qualified Data.Vinyl.TypeLevel          as V
 import qualified Data.Vinyl.Functor            as V
 import           Data.Coerce                    ( coerce )
-
--- | coercion from the generalized form
-coerceToRecord
-  :: V.RMap rs => V.Rec (V.Identity V.:. V.ElField) rs -> F.Record rs
-coerceToRecord = V.rmap coerce
-
--- | coercion to the generalized form
-coerceFromRecord
-  :: V.RMap rs => F.Record rs -> V.Rec (V.Identity V.:. V.ElField) rs
-coerceFromRecord = V.rmap coerce
 
 -- | This is only here so we can use hash maps for the grouping step.  This should properly be in Frames itself.
 instance Hash.Hashable (F.Record '[]) where
