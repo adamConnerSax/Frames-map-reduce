@@ -191,11 +191,7 @@ assignKeys = MR.assign (rcastF @ks) id
 -- | NB: for all but Rec case, this will have to convert record to Rec and back for the append
 reduceAndAddKey
   :: forall ks cs x record f
-   . ( IsoRec ks record f
-     , IsoRec cs record f
-     , IsoRec (ks V.++ cs) record f
-     , FI.RecVec ((ks V.++ cs))
-     )
+   . (IsoRec ks record f, IsoRec cs record f, IsoRec (ks V.++ cs) record f)
   => (forall h . Foldable h => h x -> record (f :. ElField) cs) -- ^ reduction step
   -> MR.Reduce
        (record (f :. ElField) ks)
@@ -207,11 +203,7 @@ reduceAndAddKey process =
 
 -- | Reduce by folding the data to a single row and then re-attaching the key.
 foldAndAddKey
-  :: ( IsoRec ks record f
-     , IsoRec cs record f
-     , IsoRec (ks V.++ cs) record f
-     , FI.RecVec ((ks V.++ cs))
-     )
+  :: (IsoRec ks record f, IsoRec cs record f, IsoRec (ks V.++ cs) record f)
   => FL.Fold x (record (f :. ElField) cs) -- ^ reduction fold
   -> MR.Reduce
        (record (f :. ElField) ks)
@@ -229,7 +221,6 @@ makeRecsWithKey
      , IsoRec ks record f
      , IsoRec as record f
      , IsoRec (ks V.++ as) record f
-     , (FI.RecVec (ks V.++ as))
      )
   => (y -> record (f :. ElField) as) -- ^ map a result to a record
   -> MR.Reduce (record (f :. ElField) ks) x (g y) -- ^ original reduce
@@ -251,7 +242,6 @@ makeRecsWithKeyM
      , IsoRec ks record f
      , IsoRec as record f
      , IsoRec (ks V.++ as) record f
-     , (FI.RecVec (ks V.++ as))
      )
   => (y -> record (f :. ElField) as) -- ^ map a result to a record
   -> MR.ReduceM m (record (f :. ElField) ks) x (g y) -- ^ original reduce
