@@ -70,13 +70,11 @@ reduce'
        (F.Rec (Maybe :. F.ElField) '[Label, X, Y])
 reduce' = FMRM.foldAndAddKey $ (FFM.foldAllConstrained @Num @'[X, Y]) FL.sum
 
-
 mrFold'
   :: FMR.Fold
        (F.Rec (Maybe :. F.ElField) '[Label, X, Y])
        [F.Rec (Maybe :. F.ElField) '[Label, X, Y]]
 mrFold' = FMR.mapReduceFold unpack' assign' reduce'
-
 
 main :: IO ()
 main = do
