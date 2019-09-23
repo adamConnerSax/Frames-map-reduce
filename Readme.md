@@ -34,6 +34,12 @@ function. The type-application here specifies a constraint satisfied by all the 
 being folded, and then the cols to fold.  
 This last part is a little complex.  See the Frames.Folds modules for more details.
 
+We can also demonstrate the functions operating on ```Rec (Maybe :. ElField)``` rows.
+
+* unpack, doing nothing.
+* assign as above, using the ```Maybe``` generalized version of ```splitOnKeys```.
+* reduce as above, using the ```Maybe``` generalized versions of ```foldAndAddKey``` and ```foldAllConstrained```.
+
 ```haskell
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleInstances #-}
