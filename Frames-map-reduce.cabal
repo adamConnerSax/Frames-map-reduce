@@ -25,9 +25,7 @@ source-repository head
             
 library
   ghc-options: -Wall -funbox-strict-fields
-  exposed-modules: Frames.Monomorphic.Folds
-                 , Frames.Monomorphic.MapReduce
-                 , Frames.Folds
+  exposed-modules: Frames.Folds
                  , Frames.Folds.Maybe
                  , Frames.Folds.General
                  , Frames.MapReduce

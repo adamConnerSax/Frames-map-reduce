@@ -18,7 +18,7 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
 {-|
-Module      : Frames.Folds
+Module      : Frames.Monomorphic.Folds
 Description : Types and functions to simplify folding over Vinyl/Frames records. Leans heavily on the foldl package. 
 Copyright   : (c) Adam Conner-Sax 2019
 License     : BSD
