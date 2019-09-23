@@ -1,15 +1,13 @@
 {-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications  #-}
 {-# LANGUAGE TypeOperators     #-}
-{-# LANGUAGE InstanceSigs     #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE InstanceSigs      #-}
 module Main where
-import           Data.Functor.Classes
 import qualified Control.Foldl                 as FL
 import qualified Data.List                     as L
-import           Data.Monoid                    ( Sum )
 import qualified Data.Text                     as T
 import qualified Data.Vinyl                    as V
 import           Data.Vinyl.Functor             ( Compose(..)
@@ -21,7 +19,6 @@ import qualified Frames.Folds                  as FF
 import qualified Frames.Folds.Maybe            as FFM
 import qualified Frames.MapReduce              as FMR
 import qualified Frames.MapReduce.Maybe        as FMRM
-import           Data.Coerce                    ( coerce )
 import           System.Random                  ( newStdGen
                                                 , randomRs
                                                 )
@@ -55,7 +52,6 @@ instance (Eq (F.ElField a)) => Eq (Compose Maybe F.ElField a) where
 instance (Ord (F.ElField a)) => Ord (Compose Maybe F.ElField a) where
   compare (Compose fga) (Compose fga') = fga `compare` fga'
 
-
 unpack'
   :: FMR.Unpack (F.Rec (Maybe :. F.ElField) rs) (F.Rec (Maybe :. F.ElField) rs)
 unpack' = FMRM.unpackNoOp
@@ -67,48 +63,19 @@ assign'
        (F.Rec (Maybe :. F.ElField) '[X, Y])
 assign' = FMRM.splitOnKeys @'[Label]
 
--- | Computes the sum of all `Just` elements
-maybeSum :: Num a => FL.Fold (Maybe a) (Maybe a)
-maybeSum = FL.Fold go Nothing id
- where
-  go a b = case a of
-    Just a' -> case b of
-      Just b' -> Just $ a' + b'
-      Nothing -> a
-    Nothing -> case b of
-      Just _  -> b
-      Nothing -> Nothing
-{-# INLINABLE maybeSum #-}
-
 reduce'
   :: FMR.Reduce
        (F.Rec (Maybe :. F.ElField) '[Label])
        (F.Rec (Maybe :. F.ElField) '[X, Y])
        (F.Rec (Maybe :. F.ElField) '[Label, X, Y])
-reduce' =
-  FMRM.foldAndAddKey $ (FFM.maybeFoldAllConstrained @Num @'[X, Y]) maybeSum
+reduce' = FMRM.foldAndAddKey $ (FFM.foldAllConstrained @Num @'[X, Y]) FL.sum
 
--- mrFold' :: FMR.Fold (F.Rec (Maybe :. F.ElField) rs0) [F.Rec (Maybe :. F.ElField) rs0]
+
 mrFold'
   :: FMR.Fold
        (F.Rec (Maybe :. F.ElField) '[Label, X, Y])
        [F.Rec (Maybe :. F.ElField) '[Label, X, Y]]
 mrFold' = FMR.mapReduceFold unpack' assign' reduce'
-
-
-reduce''
-  :: FMR.Reduce
-       (F.Rec (Maybe :. F.ElField) '[Label])
-       (F.Rec (Maybe :. F.ElField) '[X, Y])
-       (F.Rec (Maybe :. F.ElField) '[Label, X, Y])
-reduce'' = FMRM.foldAndAddKey $ (FFM.foldAllConstrained @Num @'[X, Y]) FL.sum
-
--- mrFold' :: FMR.Fold (F.Rec (Maybe :. F.ElField) rs0) [F.Rec (Maybe :. F.ElField) rs0]
-mrFold''
-  :: FMR.Fold
-       (F.Rec (Maybe :. F.ElField) '[Label, X, Y])
-       [F.Rec (Maybe :. F.ElField) '[Label, X, Y]]
-mrFold'' = FMR.mapReduceFold unpack' assign' reduce''
 
 
 main :: IO ()
@@ -118,8 +85,6 @@ main = do
   putStrLn $ (L.intercalate "\n" $ fmap show $ FL.fold FL.list result)
   let result' = FMR.fold mrFold' createHolyRows
   putStrLn . unlines . fmap show $ FL.fold FL.list result'
-  let result'' = FMR.fold mrFold'' createHolyRows
-  putStrLn . unlines . fmap show $ FL.fold FL.list result''
 
 {- Output
 {label :-> "A", y :-> 1577.3965303339942, x :-> 1507.286289962377}
