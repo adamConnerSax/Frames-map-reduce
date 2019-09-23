@@ -23,6 +23,12 @@ Also included, in the Frames.Folds (and Frames.Folds.Maybe, Frames.Folds.General
 are some helpful functions for building folds of Frames from folds over each column, 
 specified either individually or via a constraint on all the columns being folded over.
 
+NB: The functions which operate on ```Record rs```, ```record (Maybe :. ElField) rs``` 
+and ```Applicative f => record (f :. ElField)```, have the same names but reside in 
+different modules.  I assume most users will want only one version.  But if, as in the 
+example provided, you want to use two versions in the same module you will need to import
+at least one of them qualified.
+
 For example, given a Frame with three columns, a text column ```Label``` and two columns, ```X``` and ```Y```, holding doubles, we
 
 * unpack, filtering using ```unpackFilterOnField``` (with a type-application to specify the ```Label``` column), 
