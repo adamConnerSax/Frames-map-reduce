@@ -1,18 +1,38 @@
-# Frames-map-reduce- v 0.1.0.0
+# Frames-map-reduce- v 0.2.0.0
 
 [![Build Status][travis-badge]][travis]
 [![Hackage][hackage-badge]][hackage]
 [![Hackage Dependencies][hackage-deps-badge]][hackage-deps]
 
-This library contains some useful functions for using the [map-reduce-folds](https://hackage.haskell.org/package/map-reduce-folds-0.1.0.0) package with Frames (containers of data rows) from the [Frames](http://hackage.haskell.org/package/Frames) package.  Included, in Frames.MapReduce, are helpers for filtering Frames, splitting records into key and data columns and reattaching key columns after reducing.
+This library contains some useful functions for using the 
+[map-reduce-folds](https://hackage.haskell.org/package/map-reduce-folds-0.1.0.0) 
+package with Frames (containers of data rows) from the 
+[Frames](http://hackage.haskell.org/package/Frames) package.  
+Included, in Frames.MapReduce, are helpers for filtering Frames,
+splitting records into key and data columns and reattaching key columns after reducing.
 
-Also included, in the Frames.Folds module, are some helpful functions for building folds of Frames from folds over each column, specified either individually or via a constraint on all the columns being folded over.
+There is also support for using the map-reduce-folds library with 
+Vinyl records of more complex type, e.g. ```ARec (Maybe :. ElField) rs```.
+The specific case of ```Maybe``` is handled in Frames.MapReduce.Maybe and 
+the fully polymorphic case (supporting ```Rec```, ```ARec``` and ```SRec``` 
+and any interpretation functor composed with ElField which has a reasonable 
+interpretation as ```Maybe```, e.g., ```Either```) is handled in 
+Frames.MapReduce.General and Frames.Folds.General.
+
+Also included, in the Frames.Folds (and Frames.Folds.Maybe, Frames.Folds.General) module, 
+are some helpful functions for building folds of Frames from folds over each column, 
+specified either individually or via a constraint on all the columns being folded over.
 
 For example, given a Frame with three columns, a text column ```Label``` and two columns, ```X``` and ```Y```, holding doubles, we
 
 * unpack, filtering using ```unpackFilterOnField``` (with a type-application to specify the ```Label``` column), 
-* assign, thus grouping by ```Label``` and feeding the rest of the columns to reduce using ```splitOnKeys``` with a type-application to specify which columns are the key.
-* reduce by folding over the two remaining columns using the ```foldAllConstrained``` function. The type-application here specifies a constraint satisfied by all the columns being folded, and then the cols to fold.  This last part is a little complex.  See the Frames.Folds modules for more details.
+* assign, thus grouping by ```Label``` and feeding the rest of the columns to 
+reduce using ```splitOnKeys``` with a type-application to specify which columns are the key.
+
+* reduce by folding over the two remaining columns using the ```foldAllConstrained``` 
+function. The type-application here specifies a constraint satisfied by all the columns 
+being folded, and then the cols to fold.  
+This last part is a little complex.  See the Frames.Folds modules for more details.
 
 ```haskell
 {-# LANGUAGE TypeApplications  #-}
