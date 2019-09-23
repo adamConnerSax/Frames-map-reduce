@@ -27,8 +27,10 @@ library
   ghc-options: -Wall -funbox-strict-fields
   exposed-modules: Frames.Folds
                  , Frames.Folds.Maybe
+                 , Frames.Folds.General
                  , Frames.MapReduce
                  , Frames.MapReduce.Maybe
+                 , Frames.MapReduce.General
 
   build-depends: Frames               >= 0.6.1 && < 0.7,
                  base                 >= 4.12.0 && < 4.13,

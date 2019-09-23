@@ -18,8 +18,8 @@
 {-# LANGUAGE InstanceSigs          #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
 {-|
-Module      : Frames.MapReduce
-Description : Helpers for using the map-reduce-folds package with Frames
+Module      : Frames.Monomorphic.MapReduce
+Description : Helpers for using the map-reduce-folds package with Frames.  Monomorphic in record and interpretation functor.
 Copyright   : (c) Adam Conner-Sax 2019
 License     : BSD-3-Clause
 Maintainer  : adam_conner_sax@yahoo.com
@@ -68,6 +68,8 @@ import qualified Frames.Melt                   as F
 import qualified Frames.InCore                 as FI
 import qualified Data.Vinyl                    as V
 import qualified Data.Vinyl.TypeLevel          as V
+import qualified Data.Vinyl.Functor            as V
+import           Data.Coerce                    ( coerce )
 
 -- | This is only here so we can use hash maps for the grouping step.  This should properly be in Frames itself.
 instance Hash.Hashable (F.Record '[]) where
