@@ -1,24 +1,29 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE InstanceSigs      #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE TypeFamilies      #-}
 {-# LANGUAGE TypeOperators     #-}
-{-# LANGUAGE InstanceSigs      #-}
+
 module Main where
 import qualified Control.Foldl                 as FL
 import qualified Data.List                     as L
 import qualified Data.Text                     as T
+import qualified Data.Vector                   as Vec
 import qualified Data.Vinyl                    as V
 import           Data.Vinyl.Functor             ( Compose(..)
                                                 , (:.)
                                                 )
 import qualified Frames                        as F
 import qualified Frames.CSV                    as F
+import qualified Frames.InCore                 as FI
 import qualified Frames.Folds                  as FF
 import qualified Frames.Folds.Maybe            as FFM
 import qualified Frames.MapReduce              as FMR
 import qualified Frames.MapReduce.Maybe        as FMRM
+import qualified Frames.Aggregation            as FA
 import           System.Random                  ( newStdGen
                                                 , randomRs
                                                 )
@@ -44,6 +49,27 @@ reduce = FMR.foldAndAddKey $ (FF.foldAllConstrained @Num @'[Y, X]) FL.sum
 
 mrFold = FMR.concatFold $ FMR.mapReduceFold unpack assign reduce
 
+-- This looks more awkward than it will be in practice since you will usually
+-- have these folds already
+aggDataFold :: FL.Fold (F.Record '[Y, X]) (F.Record '[Y, X])
+aggDataFold =
+  let sumYF      = FL.premap (F.rgetField @Y) FL.sum
+      sumProdXYF = FL.premap (\r -> F.rgetField @X r * F.rgetField @Y r) FL.sum
+      wgtdSumXF  = (\sXY sY -> sXY / sY) <$> sumProdXYF <*> sumYF
+      mkRow x = x F.&: V.RNil
+  in  FA.mergeDataFolds (fmap mkRow sumYF) (fmap mkRow wgtdSumXF)
+
+data AggKey = AorB | Other deriving (Eq, Ord, Show)
+type instance FI.VectorFor AggKey = Vec.Vector
+
+type AggKeyCol = "AggKey" F.:-> AggKey
+
+groupLabels :: F.Record '[Label] -> F.Record '[AggKeyCol]
+groupLabels l = if (F.rgetField @Label l `elem` ["A", "B"])
+  then AorB F.&: V.RNil
+  else Other F.&: V.RNil
+
+aggFold = FA.aggregateFold groupLabels aggDataFold
 
 -- Bleh, this should go in Frames.  
 instance (Eq (F.ElField a)) => Eq (Compose Maybe F.ElField a) where
@@ -83,6 +109,8 @@ main = do
   putStrLn $ (L.intercalate "\n" $ fmap show $ FL.fold FL.list result)
   let result' = FMR.fold mrFold' createHolyRows
   putStrLn . unlines . fmap show $ FL.fold FL.list result'
+  let aggregatedResult = FMR.fold aggFold f
+  putStrLn $ (L.intercalate "\n" $ fmap show $ FL.fold FL.list aggregatedResult)
 
 {- Output
 {label :-> "A", y :-> 1577.3965303339942, x :-> 1507.286289962377}
