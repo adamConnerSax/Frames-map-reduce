@@ -1,3 +1,5 @@
+v 0.3.0.0
+* Added Combinator for aggregation in Frames.Aggregation along with a helper to create folds over data cols.
 v 0.2.0.0 
 * Added Combinators for ```record (Maybe :. ElField) rs``` (Much thanks to Tim Pierson, @o1lo01ol1o, for the idea and the work!).
 * Added Combinators polymorphic in record type (```Rec```, ```ARec``` or ```SRec``` are supported) and composed interpretation functor ```f :. ElField```

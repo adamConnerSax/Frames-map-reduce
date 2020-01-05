@@ -1,4 +1,4 @@
-# Frames-map-reduce- v 0.2.0.0
+# Frames-map-reduce- v 0.3.0.0
 
 [![Build Status][travis-badge]][travis]
 [![Hackage][hackage-badge]][hackage]
@@ -22,6 +22,13 @@ Frames.MapReduce.General.
 Also included, in the Frames.Folds (and Frames.Folds.Maybe, Frames.Folds.General) module, 
 are some helpful functions for building folds of Frames from folds over each column, 
 specified either individually or via a constraint on all the columns being folded over.
+
+There is a helper for a common map-reduce, namely an aggregation where keys of one type
+are merged to some smaller set of keys and some data columns are aggregated on the
+merged group.  Given a function from old keys to new keys (as records) and a fold over
+the data expressing the aggregation, this function will build the fold to do the 
+aggregation.  And there is a helper function for building the data fold from folds
+for each field.
 
 NB: The functions which operate on ```Record rs```, ```record (Maybe :. ElField) rs``` 
 and ```Applicative f => record (f :. ElField)```, have the same names but reside in 

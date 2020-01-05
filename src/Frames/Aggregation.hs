@@ -17,7 +17,12 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
-module Frames.Aggregation where
+
+module Frames.Aggregation
+  ( aggregateFold
+  , mergeDataFolds
+  )
+where
 
 import qualified Control.MapReduce             as MR
 import           Control.MapReduce                 -- for re-export
