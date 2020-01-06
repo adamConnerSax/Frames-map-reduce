@@ -19,7 +19,15 @@
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
 
 module Frames.Aggregation
-  ( aggregateFold
+  (
+    -- * Aggregation Function wrapper
+    AggregateKeyFunction
+    -- * Aggregation Function combinators
+  , combineKeyAggregations
+  , keyAggregator
+    -- * aggregationFolds
+  , aggregateAllFold
+  , aggregateFold
   , mergeDataFolds
   )
 where
@@ -50,6 +58,30 @@ import qualified Data.Vinyl.SRec               as V
 import qualified Data.Vinyl.ARec               as V
 import qualified Foreign.Storable              as FS
 
+
+-- | Data type to hold an aggregation function
+-- we wrap this to make it easier to write combiners, etc.
+data AggregateKeyFunction k k' where
+  AggregateKeyFunction :: (F.Record k -> F.Record k') -> AggregateKeyFunction k k'
+
+-- | Combine 2 key aggregation functions
+combineKeyAggregations
+  :: (a F.⊆ (a V.++ b), b F.⊆ (a V.++ b))
+  => AggregateKeyFunction a a'
+  -> AggregateKeyFunction b b'
+  -> AggregateKeyFunction (a V.++ b) (a' V.++ b')
+combineKeyAggregations (AggregateKeyFunction aToa') (AggregateKeyFunction bTob')
+  = AggregateKeyFunction cToc'
+  where cToc' r = aToa' (F.rcast r) `V.rappend` bTob' (F.rcast r)
+
+-- | promote an ordinary function to 
+keyAggregator
+  :: forall a b
+   . (V.KnownField a, V.KnownField b)
+  => (V.Snd a -> V.Snd b)
+  -> AggregateKeyFunction '[a] '[b]
+keyAggregator f = AggregateKeyFunction (\r -> f (F.rgetField @a r) F.&: V.RNil)
+
 -- | Given some group keys in columns k,
 -- some keys to aggregate over in columns ak,
 -- some keys to aggregate into in (new) columns ak',
@@ -65,7 +97,7 @@ import qualified Foreign.Storable              as FS
 -- So your k is the state column, ak is the age column, ak' is a new column with
 -- data type to indicate over/under.  The Fold has to sum over the total votes and
 -- perform a weighted-sum over the percentages.
-aggregateFold
+aggregateAllFold
   :: forall ak ak' d
    . ( F.Disjoint ak d ~ True
      , F.Disjoint ak' d ~ True
@@ -77,16 +109,47 @@ aggregateFold
      , FI.RecVec (ak' V.++ d)
      , Ord (F.Record ak)
      )
-  => (F.Record ak -> F.Record ak') -- ^ get aggregated key from key
+  => AggregateKeyFunction ak ak' -- ^ get aggregated key from key
   -> (FL.Fold (F.Record d) (F.Record d)) -- ^ aggregate data
   -> FL.Fold (F.Record (ak V.++ d)) (F.FrameRec (ak' V.++ d))
-aggregateFold toAggKey aggDataF =
+aggregateAllFold (AggregateKeyFunction toAggKey) aggDataF =
   let aggUnpack =
         MR.Unpack
           (\r -> [F.rcast @(ak' V.++ d) $ r `V.rappend` (toAggKey (F.rcast r))]) -- add new keys, lose old
       aggAssign = FMR.assignKeysAndData @ak' @d
   in  FMR.concatFold
         $ FMR.mapReduceFold aggUnpack aggAssign (FMR.foldAndAddKey aggDataF)
+
+
+aggregateFold
+  :: forall k ak ak' d
+   . ( F.Disjoint ak d ~ True
+     , F.Disjoint ak' d ~ True
+     , (ak' V.++ d) F.⊆ ((ak V.++ d) V.++ ak')
+     , ak F.⊆ (ak V.++ d)
+     , ak' F.⊆ (ak' V.++ d)
+     , d F.⊆ (ak' V.++ d)
+     , Ord (F.Record ak')
+     , FI.RecVec (ak' V.++ d)
+     , Ord (F.Record ak)
+     , (k V.++ (ak' V.++ d)) ~ ((k V.++ ak') V.++ d)
+     , Ord (F.Record k)
+     , k F.⊆ ((k V.++ ak') V.++ d)
+     , k F.⊆ ((k V.++ ak) V.++ d)
+     , (ak V.++ d) F.⊆ ((k V.++ ak) V.++ d)
+     , FI.RecVec ((k V.++ ak') V.++ d)
+     )
+  => AggregateKeyFunction ak ak' -- ^ get aggregated key from key
+  -> (FL.Fold (F.Record d) (F.Record d)) -- ^ aggregate data
+  -> FL.Fold
+       (F.Record (k V.++ ak V.++ d))
+       (F.FrameRec (k V.++ ak' V.++ d))
+aggregateFold keyAgg aggDataF = FMR.concatFold $ FMR.mapReduceFold
+  MR.noUnpack
+  (FMR.assignKeysAndData @k @(ak V.++ d))
+  ( FMR.makeRecsWithKey id
+  $ MR.ReduceFold (const $ aggregateAllFold keyAgg aggDataF)
+  )
 
 
 mergeDataFolds

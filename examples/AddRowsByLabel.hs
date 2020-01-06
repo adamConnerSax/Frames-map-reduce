@@ -69,7 +69,7 @@ groupLabels l = if (F.rgetField @Label l `elem` ["A", "B"])
   then AorB F.&: V.RNil
   else Other F.&: V.RNil
 
-aggFold = FA.aggregateFold groupLabels aggDataFold
+aggFold = FA.aggregateFold @'[] groupLabels aggDataFold
 
 -- Bleh, this should go in Frames.  
 instance (Eq (F.ElField a)) => Eq (Compose Maybe F.ElField a) where
