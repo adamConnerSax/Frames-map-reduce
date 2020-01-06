@@ -20,11 +20,11 @@
 
 module Frames.Aggregation
   (
-    -- * Aggregation Function wrapper
-    AggregateKeyFunction
+    -- * Type-alias for maps from one record key to another
+    RecordKeyMap
     -- * Aggregation Function combinators
   , combineKeyAggregations
-  , keyAggregator
+  , keyMap
     -- * aggregationFolds
   , aggregateAllFold
   , aggregateFold
@@ -61,26 +61,24 @@ import qualified Foreign.Storable              as FS
 
 -- | Data type to hold an aggregation function
 -- we wrap this to make it easier to write combiners, etc.
-data AggregateKeyFunction k k' where
-  AggregateKeyFunction :: (F.Record k -> F.Record k') -> AggregateKeyFunction k k'
+type RecordKeyMap k k' = F.Record k -> F.Record k'
 
--- | Combine 2 key aggregation functions
+-- | Combine 2 key aggregation functions over different fields
 combineKeyAggregations
   :: (a F.⊆ (a V.++ b), b F.⊆ (a V.++ b))
-  => AggregateKeyFunction a a'
-  -> AggregateKeyFunction b b'
-  -> AggregateKeyFunction (a V.++ b) (a' V.++ b')
-combineKeyAggregations (AggregateKeyFunction aToa') (AggregateKeyFunction bTob')
-  = AggregateKeyFunction cToc'
-  where cToc' r = aToa' (F.rcast r) `V.rappend` bTob' (F.rcast r)
+  => RecordKeyMap a a'
+  -> RecordKeyMap b b'
+  -> RecordKeyMap (a V.++ b) (a' V.++ b')
+combineKeyAggregations aToa' bTob' r =
+  aToa' (F.rcast r) `V.rappend` bTob' (F.rcast r)
 
--- | promote an ordinary function to 
-keyAggregator
+-- | promote an ordinary function to an RecordKeyMap from one col to another
+keyMap
   :: forall a b
    . (V.KnownField a, V.KnownField b)
   => (V.Snd a -> V.Snd b)
-  -> AggregateKeyFunction '[a] '[b]
-keyAggregator f = AggregateKeyFunction (\r -> f (F.rgetField @a r) F.&: V.RNil)
+  -> RecordKeyMap '[a] '[b]
+keyMap f r = f (F.rgetField @a r) F.&: V.RNil
 
 -- | Given some group keys in columns k,
 -- some keys to aggregate over in columns ak,
@@ -109,10 +107,10 @@ aggregateAllFold
      , FI.RecVec (ak' V.++ d)
      , Ord (F.Record ak)
      )
-  => AggregateKeyFunction ak ak' -- ^ get aggregated key from key
+  => RecordKeyMap ak ak' -- ^ get aggregated key from key
   -> (FL.Fold (F.Record d) (F.Record d)) -- ^ aggregate data
   -> FL.Fold (F.Record (ak V.++ d)) (F.FrameRec (ak' V.++ d))
-aggregateAllFold (AggregateKeyFunction toAggKey) aggDataF =
+aggregateAllFold toAggKey aggDataF =
   let aggUnpack =
         MR.Unpack
           (\r -> [F.rcast @(ak' V.++ d) $ r `V.rappend` (toAggKey (F.rcast r))]) -- add new keys, lose old
@@ -139,7 +137,7 @@ aggregateFold
      , (ak V.++ d) F.⊆ ((k V.++ ak) V.++ d)
      , FI.RecVec ((k V.++ ak') V.++ d)
      )
-  => AggregateKeyFunction ak ak' -- ^ get aggregated key from key
+  => RecordKeyMap ak ak' -- ^ get aggregated key from key
   -> (FL.Fold (F.Record d) (F.Record d)) -- ^ aggregate data
   -> FL.Fold
        (F.Record (k V.++ ak V.++ d))

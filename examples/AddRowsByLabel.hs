@@ -3,6 +3,8 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE InstanceSigs      #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds         #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications  #-}
 {-# LANGUAGE TypeFamilies      #-}
 {-# LANGUAGE TypeOperators     #-}
@@ -26,6 +28,11 @@ import qualified Frames.MapReduce.Maybe        as FMRM
 import qualified Frames.Aggregation            as FA
 import           System.Random                  ( newStdGen
                                                 , randomRs
+                                                )
+
+import           Data.Kind                      ( Type )
+import           GHC.TypeLits                   ( KnownSymbol
+                                                , Symbol
                                                 )
 
 -- Create types for the cols                                                
@@ -59,17 +66,30 @@ aggDataFold =
       mkRow x = x F.&: V.RNil
   in  FA.mergeDataFolds (fmap mkRow sumYF) (fmap mkRow wgtdSumXF)
 
+aggDataFold' :: FL.Fold (F.Record '[Y, X]) (F.Record '[Y, X])
+aggDataFold' =
+  let sumYF      = FL.premap (F.rgetField @Y) FL.sum
+      sumProdXYF = FL.premap (\r -> F.rgetField @X r * F.rgetField @Y r) FL.sum
+      wgtdSumXF  = (\sXY sY -> sXY / sY) <$> sumProdXYF <*> sumYF
+      asFieldFold
+        :: KnownSymbol s
+        => FL.Fold (F.Record rs) t
+        -> FF.FoldRecord F.ElField rs '(s, t)
+      asFieldFold f = FF.FoldRecord $ fmap V.Field f
+  in  FF.sequenceRecFold
+      $    asFieldFold sumYF
+      V.:& asFieldFold wgtdSumXF
+      V.:& V.RNil
+
 data AggKey = AorB | Other deriving (Eq, Ord, Show)
 type instance FI.VectorFor AggKey = Vec.Vector
 
 type AggKeyCol = "AggKey" F.:-> AggKey
 
-groupLabels :: F.Record '[Label] -> F.Record '[AggKeyCol]
-groupLabels l = if (F.rgetField @Label l `elem` ["A", "B"])
-  then AorB F.&: V.RNil
-  else Other F.&: V.RNil
+groupLabels :: FA.RecordKeyMap '[Label] '[AggKeyCol]
+groupLabels = FA.keyMap $ \l -> if (l `elem` ["A", "B"]) then AorB else Other
 
-aggFold = FA.aggregateFold @'[] groupLabels aggDataFold
+aggFold = FA.aggregateFold @'[] groupLabels aggDataFold'
 
 -- Bleh, this should go in Frames.  
 instance (Eq (F.ElField a)) => Eq (Compose Maybe F.ElField a) where
