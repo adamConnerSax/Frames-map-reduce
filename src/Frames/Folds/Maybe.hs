@@ -36,15 +36,16 @@ module Frames.Folds.Maybe
   , FoldEndo(..)
   , FoldRecord(..)
 
-  -- * functions for building records of folds
+    -- * functions for building records of folds
+  , toFoldRecord
   , recFieldF
   , fieldToFieldFold
 
-  -- * functions for turning records of folds into folds of records
+    -- * functions for turning records of folds into folds of records
   , sequenceRecFold
   , sequenceEndoFolds
 
-  -- * functions using constraints to extend an endo-fold across a record
+    -- * functions using constraints to extend an endo-fold across a record
   , foldAll
   , foldAllConstrained
   , maybeFoldAllConstrained
@@ -59,21 +60,26 @@ import           Frames.Folds.General           ( FoldEndo(..)
                                                 )
 
 import           Frames.Folds                   ( EndoFold
-                                                , FoldFieldEndo(..)
-                                                , monoidWrapperToFold
                                                 , MonoidalField
                                                 )
 
 import qualified Control.Foldl                 as FL
 
-import qualified Data.Profunctor               as P
 import qualified Data.Vinyl                    as V
 import           Data.Vinyl                     ( ElField )
 import qualified Data.Vinyl.TypeLevel          as V
-import qualified Data.Vinyl.Functor            as V
 import qualified Frames                        as F
 import           Frames                         ( (:.) )
 import qualified Frames.Melt                   as F
+
+-- | Create a @FoldRecord@ from a @Fold@ from a record to a specific type.
+-- This is helpful when creating folds from a record to another record (or the same record)
+-- by building it one field at a time. See examples for details.
+toFoldRecord
+  :: (a -> g b)
+  -> FL.Fold (record (Maybe :. ElField) rs) a
+  -> FoldRecord record Maybe g rs b
+toFoldRecord = FG.toFoldRecord --FoldRecord . fmap wrap
 
 -- | Helper for building a 'FoldRecord' from a given fold and function of the record
 recFieldF

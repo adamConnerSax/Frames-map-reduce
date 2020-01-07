@@ -1,20 +1,20 @@
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE PolyKinds             #-}
+{-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE PolyKinds             #-}
 {-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE ConstraintKinds       #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
-{-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
 {-|
@@ -38,6 +38,7 @@ module Frames.Folds
   , FoldRecord(..)
 
   -- * functions for building records of folds
+  , toFoldRecord
   , recFieldF
   , fieldToFieldFold
 
@@ -86,6 +87,16 @@ newtype FoldFieldEndo f a = FoldFieldEndo { unFoldFieldEndo :: EndoFold (f a) } 
 
 -- | Wrapper for folds from a record to an interpreted field.  Usually f ~ ElField
 newtype FoldRecord f rs a = FoldRecord { unFoldRecord :: FL.Fold (F.Record rs) (f a) }
+
+-- | Create a @FoldRecord@ from a @Fold@ from a record to a specific type.
+-- This is helpful when creating folds from a record to another record (or the same record)
+-- by building it one field at a time.  See examples for details.
+toFoldRecord
+  :: V.KnownField t
+  => FL.Fold (F.Record rs) (V.Snd t)
+  -> FoldRecord F.ElField rs t
+toFoldRecord = FoldRecord . fmap V.Field
+{-# INLINABLE toFoldRecord #-}
 
 -- | Helper for building a 'FoldRecord' from a given fold and function of the record
 recFieldF
@@ -146,10 +157,12 @@ sequenceFieldEndoFolds
 sequenceFieldEndoFolds = sequenceRecFold . endoFieldFoldsToRecordFolds
 {-# INLINABLE sequenceFieldEndoFolds #-}
 
+{-
 liftFold
   :: V.KnownField t => FL.Fold (V.Snd t) (V.Snd t) -> FoldFieldEndo F.ElField t
 liftFold = FoldFieldEndo . fieldFold
 {-# INLINABLE liftFold #-}
+-}
 
 -- This is not a natural transformation, FoldEndoT ~> FoldEndo F.EField, because of the constraint
 liftFoldEndo :: V.KnownField t => FoldEndo t -> FoldFieldEndo F.ElField t

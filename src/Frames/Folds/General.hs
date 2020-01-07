@@ -7,10 +7,10 @@
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE PolyKinds             #-}
+{-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TemplateHaskell       #-}
-{-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE PolyKinds             #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
@@ -41,6 +41,7 @@ module Frames.Folds.General
   , ConstrainedField
 
   -- * functions for building records of folds
+  , toFoldRecord
   , recFieldF
   , fieldToFieldFold
 
@@ -87,11 +88,23 @@ fieldFold =
   P.dimap (fmap (\(V.Field x) -> x) . V.getCompose) (V.Compose . fmap V.Field)
 {-# INLINABLE fieldFold #-}
 
+
+
 -- | Wrapper for Endo-folds of the field types of ElFields
 newtype FoldEndo f t = FoldEndo { unFoldEndo :: EndoFold (f (V.Snd t)) }
 
 -- | Wrapper for folds from a record to an interpreted field.  Usually g ~ ElField
 newtype FoldRecord record f g rs a = FoldRecord { unFoldRecord :: FL.Fold (record (f :. ElField) rs) (g a) }
+
+-- | Create a @FoldRecord@ from a @Fold@ from a record to a specific type.
+-- This is helpful when creating folds from a record to another record (or the same record)
+-- by building it one field at a time.  See examples for details.
+toFoldRecord
+  :: (a -> g b)
+  -> FL.Fold (record (f :. ElField) rs) a
+  -> FoldRecord record f g rs b
+toFoldRecord wrap = FoldRecord . fmap wrap
+{-# INLINABLE toFoldRecord #-}
 
 -- | Control.Foldl helper for filtering
 filteredFold :: (f a -> Maybe a) -> FL.Fold a b -> FL.Fold (f a) b
@@ -171,13 +184,14 @@ sequenceFieldEndoFolds
 sequenceFieldEndoFolds = sequenceRecFold . endoFieldFoldsToRecordFolds
 {-# INLINABLE sequenceFieldEndoFolds #-}
 
+{-
 liftFold
   :: (V.KnownField t, Functor f)
   => FL.Fold (f (V.Snd t)) (f (V.Snd t))
   -> FoldFieldEndo (f :. ElField) t
 liftFold = FoldFieldEndo . fieldFold
 {-# INLINABLE liftFold #-}
-
+-}
 -- This is not a natural transformation, FoldEndoT ~> FoldEndo F.EField, because of the constraint
 liftFoldEndo
   :: (V.KnownField t, Functor f)
