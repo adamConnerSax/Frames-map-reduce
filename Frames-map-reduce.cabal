@@ -32,6 +32,8 @@ library
                  , Frames.MapReduce.Maybe
                  , Frames.MapReduce.General
                  , Frames.Aggregation
+                 , Frames.Aggregation.General
+                 , Frames.Aggregation.Maybe
 
   build-depends: Frames               >= 0.6.1 && < 0.7,
                  base                 >= 4.12.0 && < 4.13,

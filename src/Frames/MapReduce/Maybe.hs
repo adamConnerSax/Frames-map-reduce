@@ -17,22 +17,13 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
-module Frames.MapReduce.Maybe
-  ( module Frames.MapReduce.Maybe
---  , module Frames.MapReduce.General
-  )
-where
+module Frames.MapReduce.Maybe where
+
 import qualified Control.MapReduce             as MR
-import           Control.MapReduce                 -- for re-export
 import qualified Frames.MapReduce.General      as MG
 
 import qualified Control.Foldl                 as FL
-import qualified Data.Foldable                 as F
-import qualified Data.Hashable                 as Hash
-import qualified Data.List                     as L
 import           Data.Maybe                     ( isJust )
-import           Data.Monoid                    ( Monoid(..) )
-import           Data.Hashable                  ( Hashable )
 
 import qualified Frames                        as F
 import           Frames                         ( (:.) )
@@ -40,7 +31,7 @@ import qualified Frames.Melt                   as F
 import qualified Frames.InCore                 as FI
 import qualified Data.Vinyl                    as V
 import           Data.Vinyl                     ( ElField )
-import qualified Data.Vinyl.Functor            as V
+--import qualified Data.Vinyl.Functor            as V
 import qualified Data.Vinyl.TypeLevel          as V
 
 -- | Don't do anything 
@@ -77,7 +68,7 @@ unpackGoodRows
 unpackGoodRows = MG.unpackGoodRows  --unpackFilterRow (isJust . F.recMaybe . F.rcast @cs)
 
 unpackGoodRecRows
-  :: forall cs rs record
+  :: forall cs rs
    . (MG.RCastC cs rs V.Rec Maybe)
   => MR.Unpack (V.Rec (Maybe :. ElField) rs) (V.Rec (Maybe :. ElField) rs)
 unpackGoodRecRows = MG.unpackGoodRows @cs (isJust . F.recMaybe)

@@ -23,12 +23,19 @@ Also included, in the Frames.Folds (and Frames.Folds.Maybe, Frames.Folds.General
 are some helpful functions for building folds of Frames from folds over each column, 
 specified either individually or via a constraint on all the columns being folded over.
 
-There is a helper for a common map-reduce, namely an aggregation where keys of one type
-are merged to some smaller set of keys and some data columns are aggregated on the
-merged group.  Given a function from old keys to new keys (as records) and a fold over
+There is a set of modules for aggregations 
+(Frames.Aggregation, Frames.Aggregation.General, Frames.Aggregation.Maybe),
+a common map-reduce pattern where a set of keys (ages, locations, e.g.,)
+are merged to some smaller set of keys (Child/Adult, Urban/Rural, e.g,) 
+and the data columns (e.g., population, fraction vaccinated against flu) can be
+aggregated to data for the merged group.  
+Given a function from old keys to new keys (as records) and a fold over
 the data expressing the aggregation, this function will build the fold to do the 
-aggregation.  And there is a helper function for building the data fold from folds
-for each field.
+aggregation over the entire data-set.  
+There are helper functions to:
+- Build the data fold from folds for each field.
+- Lift functions on types (Age -> Child/Adult) to functions on record columns containing those types.
+- Merge key functions (Age -> Child/Adult, Location -> Urban/Rural) -> ((Age,Location) -> (Child/Adult,Urban/Rural))
 
 NB: The functions which operate on ```Record rs```, ```record (Maybe :. ElField) rs``` 
 and ```Applicative f => record (f :. ElField)```, have the same names but reside in 
@@ -46,6 +53,15 @@ reduce using ```splitOnKeys``` with a type-application to specify which columns 
 function. The type-application here specifies a constraint satisfied by all the columns 
 being folded, and then the cols to fold.  
 This last part is a little complex.  See the Frames.Folds modules for more details.
+
+We can use an aggregation:
+
+* Aggregate the data using a sum on the ```Y``` field and a Y-weighted sum on the ```X``` field.
+* Create an aggregate key, in this case one which represents the label being "A" or "B" vs. anything else
+* Create a function to map records of Labels into records of our new key.
+* Build the resulting fold, using ```aggregateFold```.  NB: If we had more key columns we could
+hold them constant and we would need specify them via type-application to ```aggregateFold```.  In
+this case we have no such columns so that argument is ```'[]```
 
 We can also demonstrate the functions operating on ```Rec (Maybe :. ElField)``` rows.
 

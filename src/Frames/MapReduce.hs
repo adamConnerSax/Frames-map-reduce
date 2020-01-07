@@ -17,6 +17,7 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# LANGUAGE InstanceSigs          #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 {-|
 Module      : Frames.Monomorphic.MapReduce
 Description : Helpers for using the map-reduce-folds package with Frames.  Monomorphic in record and interpretation functor.
@@ -57,10 +58,7 @@ import qualified Control.MapReduce             as MR
 import           Control.MapReduce                 -- for re-export
 
 import qualified Control.Foldl                 as FL
-import qualified Data.Foldable                 as F
 import qualified Data.Hashable                 as Hash
-import qualified Data.List                     as L
-import           Data.Monoid                    ( Monoid(..) )
 import           Data.Hashable                  ( Hashable )
 
 import qualified Frames                        as F
@@ -68,8 +66,6 @@ import qualified Frames.Melt                   as F
 import qualified Frames.InCore                 as FI
 import qualified Data.Vinyl                    as V
 import qualified Data.Vinyl.TypeLevel          as V
-import qualified Data.Vinyl.Functor            as V
-import           Data.Coerce                    ( coerce )
 
 -- | This is only here so we can use hash maps for the grouping step.  This should properly be in Frames itself.
 instance Hash.Hashable (F.Record '[]) where

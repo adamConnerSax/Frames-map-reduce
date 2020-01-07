@@ -3,6 +3,11 @@ v 0.3.0.0
 record functions to be used in aggregations, combine key aggregations.
 * Added ```toRecordFold``` to the Folds modules to simplify making record to record folds from record to Type folds. See examples.
 * Added an example of its use in the example.
+* Added the full record/functor generalization in Frames.Aggregation.General
+* Added the specialization to ```Maybe``` in Frames.Aggregation.Maybe
+* Cleanup of unneccesary imports
+* Suppressed Orphan Instance warnings about Hashable instances for ```Record``` and general record types.  These
+should properly be in Vinyl.
 
 v 0.2.0.0 
 * Added Combinators for ```record (Maybe :. ElField) rs``` (Much thanks to Tim Pierson, @o1lo01ol1o, for the idea and the work!).

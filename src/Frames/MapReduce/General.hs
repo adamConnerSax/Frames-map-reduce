@@ -17,25 +17,18 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Frames.MapReduce.General where
 
 import qualified Control.MapReduce             as MR
-import           Control.MapReduce                 -- for re-export
 
 import qualified Control.Foldl                 as FL
-import qualified Data.Foldable                 as F
 import qualified Data.Hashable                 as Hash
-import qualified Data.List                     as L
-import           Data.Maybe                     ( isJust )
-import           Data.Monoid                    ( Monoid(..) )
-import           Data.Hashable                  ( Hashable )
 import           Data.Kind                      ( Type )
 import           GHC.TypeLits                   ( Symbol )
 
-import qualified Frames                        as F
 import           Frames                         ( (:.) )
 import qualified Frames.Melt                   as F
-import qualified Frames.InCore                 as FI
 import qualified Data.Vinyl                    as V
 import           Data.Vinyl                     ( ElField )
 import qualified Data.Vinyl.Functor            as V
@@ -98,6 +91,17 @@ instance (V.NatToInt (V.RLength rs)
          , V.RPureConstrained (V.IndexableField rs) rs) => IsoRec rs V.ARec f where
   toRec = V.fromARec
   fromRec = V.toARec
+
+isoRecAppend
+  :: forall f record (as :: [(Symbol, Type)]) bs
+   . (IsoRec as record f, IsoRec bs record f, IsoRec (as V.++ bs) record f)
+  => record (f :. ElField) as
+  -> record (f :. ElField) bs
+  -> record (f :. ElField) (as V.++ bs)
+isoRecAppend lhs rhs =
+  fromRec @(as V.++ bs) @record @f
+    $           (toRec @as @record @f lhs)
+    `V.rappend` (toRec @bs @record @f rhs)
 
 -- | This is only here so we can use hash maps for the grouping step.  This should properly be in Frames itself.
 instance Hash.Hashable (record (f :. ElField)  '[]) where
@@ -214,7 +218,7 @@ foldAndAddKey fld =
 {-# INLINABLE foldAndAddKey #-}
 
 -- | Transform a reduce which produces a container of results, with a function from each result to a record,
--- into a reduce which produces a FrameRec of the result records with the key re-attached.
+-- into a reduce which produces a foldable (based on the original reduce) of the result records with the key re-attached.
 makeRecsWithKey
   :: ( Functor g
      , Foldable g
@@ -234,7 +238,7 @@ makeRecsWithKey makeRec reduceToY = MR.reduceMapWithKey addKey reduceToY
 {-# INLINABLE makeRecsWithKey #-}
 
 -- | Transform an effectful reduce which produces a container of results, with a function from each result to a record,
--- into a reduce which produces a FrameRec of the result records with the key re-attached.
+-- into a reduce which produces a foldable (based on the original reduce) of the result records with the key re-attached.
 makeRecsWithKeyM
   :: ( Monad m
      , Functor g

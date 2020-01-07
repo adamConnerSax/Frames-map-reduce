@@ -33,46 +33,30 @@ module Frames.Aggregation
 where
 
 import qualified Control.MapReduce             as MR
-import           Control.MapReduce                 -- for re-export
 import qualified Frames.MapReduce              as FMR
 
 import qualified Control.Foldl                 as FL
-import qualified Data.Foldable                 as F
-import qualified Data.Hashable                 as Hash
-import qualified Data.List                     as L
-import           Data.Maybe                     ( isJust )
-import           Data.Monoid                    ( Monoid(..) )
-import           Data.Hashable                  ( Hashable )
-import           Data.Kind                      ( Type )
-import           GHC.TypeLits                   ( Symbol )
 
 import qualified Frames                        as F
-import           Frames                         ( (:.) )
 import qualified Frames.Melt                   as F
 import qualified Frames.InCore                 as FI
 import qualified Data.Vinyl                    as V
-import           Data.Vinyl                     ( ElField )
-import qualified Data.Vinyl.Functor            as V
 import qualified Data.Vinyl.TypeLevel          as V
-import qualified Data.Vinyl.SRec               as V
-import qualified Data.Vinyl.ARec               as V
-import qualified Foreign.Storable              as FS
 
-
--- | Data type to hold an aggregation function
--- we wrap this to make it easier to write combiners, etc.
+-- | Type-alias for key aggregation functions.
 type RecordKeyMap k k' = F.Record k -> F.Record k'
 
--- | Combine 2 key aggregation functions over different fields
+-- | Combine 2 key aggregation functions over disjoint columns.
 combineKeyAggregations
-  :: (a F.⊆ (a V.++ b), b F.⊆ (a V.++ b))
+  :: (a F.⊆ (a V.++ b), b F.⊆ (a V.++ b), F.Disjoint a' b' ~ 'True)
   => RecordKeyMap a a'
   -> RecordKeyMap b b'
   -> RecordKeyMap (a V.++ b) (a' V.++ b')
 combineKeyAggregations aToa' bTob' r =
   aToa' (F.rcast r) `V.rappend` bTob' (F.rcast r)
 
--- | promote an ordinary function to an RecordKeyMap from one col to another
+-- | Promote an ordinary function @a -> b@ to a @RecordKeyMap aCol bCol@ where
+-- @aCol@ holds values of type @a@ and @bCol@ holds values of type @b@.
 keyMap
   :: forall a b
    . (V.KnownField a, V.KnownField b)
@@ -97,9 +81,7 @@ keyMap f r = f (F.rgetField @a r) F.&: V.RNil
 -- perform a weighted-sum over the percentages.
 aggregateAllFold
   :: forall ak ak' d
-   . ( F.Disjoint ak d ~ True
-     , F.Disjoint ak' d ~ True
-     , (ak' V.++ d) F.⊆ ((ak V.++ d) V.++ ak')
+   . ( (ak' V.++ d) F.⊆ ((ak V.++ d) V.++ ak')
      , ak F.⊆ (ak V.++ d)
      , ak' F.⊆ (ak' V.++ d)
      , d F.⊆ (ak' V.++ d)
@@ -118,12 +100,12 @@ aggregateAllFold toAggKey aggDataF =
   in  FMR.concatFold
         $ FMR.mapReduceFold aggUnpack aggAssign (FMR.foldAndAddKey aggDataF)
 
-
+-- | Aggregate key columns @ak@ into @ak'@ while leaving key columns @k@ along.
+-- Allows aggregation over only some fields.  Will often require a typeapplication
+-- to specify what @k@ is.
 aggregateFold
   :: forall k ak ak' d
-   . ( F.Disjoint ak d ~ True
-     , F.Disjoint ak' d ~ True
-     , (ak' V.++ d) F.⊆ ((ak V.++ d) V.++ ak')
+   . ( (ak' V.++ d) F.⊆ ((ak V.++ d) V.++ ak')
      , ak F.⊆ (ak V.++ d)
      , ak' F.⊆ (ak' V.++ d)
      , d F.⊆ (ak' V.++ d)
