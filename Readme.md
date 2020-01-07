@@ -100,6 +100,25 @@ reduce = FMR.foldAndAddKey $ (FF.foldAllConstrained @Num @'[Y, X]) FL.sum
 
 mrFold = FMR.concatFold $ FMR.mapReduceFold unpack assign reduce
 
+aggDataFold :: FL.Fold (F.Record '[Y, X]) (F.Record '[Y, X])
+aggDataFold =
+  let sumYF      = FL.premap (F.rgetField @Y) FL.sum
+      sumProdXYF = FL.premap (\r -> F.rgetField @X r * F.rgetField @Y r) FL.sum
+      wgtdSumXF  = (\sXY sY -> sXY / sY) <$> sumProdXYF <*> sumYF
+  in  FF.sequenceRecFold
+      $    FF.toFoldRecord sumYF
+      V.:& FF.toFoldRecord wgtdSumXF
+      V.:& V.RNil
+
+data AggKey = AorB | Other deriving (Eq, Ord, Show)
+type instance FI.VectorFor AggKey = Vec.Vector
+
+type AggKeyCol = "AggKey" F.:-> AggKey
+
+groupLabels :: FA.RecordKeyMap '[Label] '[AggKeyCol]
+groupLabels = FA.keyMap $ \l -> if (l `elem` ["A", "B"]) then AorB else Other
+
+aggFold = FA.aggregateFold @'[] groupLabels aggDataFold
 
 -- Bleh, this should go in Frames.  
 instance (Eq (F.ElField a)) => Eq (Compose Maybe F.ElField a) where
@@ -141,6 +160,9 @@ main = do
   putStrLn $ (L.intercalate "\n" $ fmap show $ FL.fold FL.list result)
   let result' = FMR.fold mrFold' createHolyRows
   putStrLn . unlines . fmap show $ FL.fold FL.list result'
+  let aggregatedResult = FMR.fold aggFold f
+  putStrLn $ (L.intercalate "\n" $ fmap show $ FL.fold FL.list aggregatedResult)
+
 
 {- Output
 {label :-> "A", y :-> 1577.3965303339942, x :-> 1507.286289962377}
@@ -148,6 +170,9 @@ main = do
 {label :-> "C", y :-> 1528.6898777108415, x :-> 1810.5096765228654}
 {Just label :-> "A", Just x :-> 5.0, Just y :-> 2.0}
 {Just label :-> "Z", Just x :-> 5.0, Just y :-> 9.0}
+
+{AggKey :-> AorB, y :-> 3857.3338804158475, x :-> 48.675203593420946}
+{AggKey :-> Other, y :-> 45655.25138686513, x :-> 47.24947893453326}
 -}
 
 --- create the Frame
