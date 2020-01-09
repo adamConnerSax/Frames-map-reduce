@@ -17,7 +17,19 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
+{-|
+Module      : Frames.Aggregation
+Description : A specialised Map/Reduce for aggregating one set of keys to a smaller one given some operation to merge data. 
+Copyright   : (c) Adam Conner-Sax 2019
+License     : BSD
+Maintainer  : adam_conner_sax@yahoo.com
+Stability   : experimental
 
+Frames.Aggregation.General contains types and functions to support a specific map/reduce operation.  Frequently, data is given
+with more specificity than required for downstream operations.  Perhaps an age is given in years and we only need to know the
+age-band.  Assuming we know how to aggregagte data columns, we want to perform that aggregation on all the subsets required to
+build the data-set with the simpler key, while perhaps leaving some other columns alone.  @aggregateFold@ does this.
+-}
 module Frames.Aggregation
   (
     -- * Type-alias for maps from one record key to another
@@ -86,8 +98,8 @@ aggregateAllFold
      , ak' F.⊆ (ak' V.++ d)
      , d F.⊆ (ak' V.++ d)
      , Ord (F.Record ak')
-     , FI.RecVec (ak' V.++ d)
      , Ord (F.Record ak)
+     , FI.RecVec (ak' V.++ d)
      )
   => RecordKeyMap ak ak' -- ^ get aggregated key from key
   -> (FL.Fold (F.Record d) (F.Record d)) -- ^ aggregate data

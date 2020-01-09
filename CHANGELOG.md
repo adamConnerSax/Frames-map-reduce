@@ -7,7 +7,8 @@ record functions to be used in aggregations, combine key aggregations.
 * Added the specialization to ```Maybe``` in Frames.Aggregation.Maybe
 * Cleanup of unneccesary imports
 * Suppressed Orphan Instance warnings about Hashable instances for ```Record``` and general record types.  These
-should properly be in Vinyl.
+instances should properly be in Vinyl.
+* Bumped some upper bounds for GHC 8.8.  Still can't compile with 8.8+ until discrimination is updated.
 
 v 0.2.0.0 
 * Added Combinators for ```record (Maybe :. ElField) rs``` (Much thanks to Tim Pierson, @o1lo01ol1o, for the idea and the work!).

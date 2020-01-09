@@ -25,11 +25,13 @@ License     : BSD
 Maintainer  : adam_conner_sax@yahoo.com
 Stability   : experimental
 
-Frames.Aggregation.General contains types and functions to support a specific map/reduce operation.  Frequently, data is given
-with more specificity than required for downstream operations.  Perhaps an age is given in years and we only need to know the
+Frames.Aggregation.Maybe contains types and functions to support a specific but common map/reduce operation.
+Frequently, data is given with more specificity than required for downstream operations.
+Perhaps an age is given in years and we only need to know the
 age-band.  Assuming we know how to aggregagte data columns, we want to perform that aggregation on all the subsets required to
 build the data-set with the simpler key, while perhaps leaving some other columns alone.  @aggregateFold@ does this.
 
+This module specializes the general versions to the (Maybe :. ElField) intepretation functor since that is a frequent use case.
 -}
 module Frames.Aggregation.Maybe
   (
@@ -59,12 +61,6 @@ import qualified Data.Vinyl                    as V
 import           Data.Vinyl                     ( ElField )
 import qualified Data.Vinyl.TypeLevel          as V
 import qualified Control.Foldl                 as FL
-
---import qualified Control.MapReduce             as MR
---import qualified Frames.MapReduce.General      as FMR
-
-
-
 
 import           GHC.TypeLits                   ( Symbol )
 import           Data.Kind                      ( Type )

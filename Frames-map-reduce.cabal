@@ -36,12 +36,12 @@ library
                  , Frames.Aggregation.Maybe
 
   build-depends: Frames               >= 0.6.1 && < 0.7,
-                 base                 >= 4.12.0 && < 4.13,
+                 base                 >= 4.12.0 && < 4.14,
                  containers           >= 0.5.0 && < 0.7,
                  hashable             >= 1.2.7 && < 1.4,
-                 map-reduce-folds     >= 0.1.0.0,                 
+                 map-reduce-folds     >= 0.1.0.0 && < 0.1.0.5,                 
                  profunctors          >= 5.3 && < 5.6,
-                 vinyl                >= 0.11.0 && < 0.12,
+                 vinyl                >= 0.11.0 && < 0.13,
                  foldl                >= 1.4.5 && < 1.5,
                  newtype              >= 0.2 && < 0.3
   hs-source-dirs:      src
