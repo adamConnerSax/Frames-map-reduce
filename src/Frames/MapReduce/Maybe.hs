@@ -99,6 +99,21 @@ splitOnKeys
 splitOnKeys = assignKeysAndData @ks @cs
 {-# INLINABLE splitOnKeys #-}
 
+-- | Assign keys and leave the rest of the columns, excluding the keys, in the data passed to reduce.
+splitOnData
+  :: forall cs rs ks record
+   . ( MG.RCastC ks rs record Maybe
+     , MG.RCastC cs rs record Maybe
+     , ks ~ F.RDeleteAll cs rs
+     )
+  => MR.Assign
+       (record (Maybe :. ElField) ks)
+       (record (Maybe :. ElField) rs)
+       (record (Maybe :. ElField) cs)
+splitOnData = assignKeysAndData @ks @cs
+{-# INLINABLE splitOnData #-}
+
+
 -- | Assign keys and leave all columns, including the keys, in the data passed to reduce.
 assignKeys
   :: forall ks rs record

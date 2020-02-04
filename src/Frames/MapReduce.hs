@@ -40,6 +40,7 @@ module Frames.MapReduce
   , assignKeysAndData
   , assignKeys
   , splitOnKeys
+  , splitOnData
 
   -- * Reduce and Re-Attach Key Cols
   , reduceAndAddKey
@@ -123,6 +124,14 @@ splitOnKeys
   => MR.Assign (F.Record ks) (F.Record rs) (F.Record cs)
 splitOnKeys = assignKeysAndData @ks @cs
 {-# INLINABLE splitOnKeys #-}
+
+-- | Assign data and leave the rest of the columns, excluding the data, as the key.
+splitOnData
+  :: forall cs rs ks
+   . (cs F.⊆ rs, ks ~ F.RDeleteAll cs rs, ks F.⊆ rs)
+  => MR.Assign (F.Record ks) (F.Record rs) (F.Record cs)
+splitOnData = assignKeysAndData @ks @cs
+{-# INLINABLE splitOnData #-}
 
 -- | Reduce the data to a single row and then re-attach the key.
 reduceAndAddKey

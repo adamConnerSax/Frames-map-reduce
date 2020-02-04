@@ -1,3 +1,6 @@
+v 0.4.0.0 
+* Added ```splitOnData``` for assigning via a given set of data cols.
+
 v 0.3.0.0
 * Added Combinator for aggregation in Frames.Aggregation along with helpers to create folds over data cols, promote simple functions to
 record functions to be used in aggregations, combine key aggregations.
