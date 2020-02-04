@@ -17,7 +17,7 @@ copyright:           2019 Adam Conner-Sax
 category:            Data
 extra-source-files:  CHANGELOG.md    
 Build-type: Simple
-tested-with: GHC ==8.6.5 || ==8.8.2
+tested-with: GHC ==8.6.5 
 
 source-repository head
     Type: git
