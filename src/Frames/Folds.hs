@@ -46,8 +46,9 @@ module Frames.Folds
   , sequenceRecFold
   , sequenceEndoFolds
 
-  -- * functions using constraints to extend an endo-fold across a record
+  -- * functions/types using constraints to extend an endo-fold across a record
   , foldAll
+  , ConstrainedFoldable
   , foldAllConstrained
   , foldAllMonoid
 
@@ -204,20 +205,23 @@ foldAll f = sequenceEndoFolds $ V.rpureConstrained @V.KnownField (FoldEndo f)
 class (c (V.Snd t)) => ConstrainedField c t
 instance (c (V.Snd t)) => ConstrainedField c t
 
+type ConstrainedFoldable c rs = (V.RPureConstrained (ConstrainedField c) rs
+                                , V.RPureConstrained V.KnownField rs
+                                , V.RApply rs
+                                , EndoFieldFoldsToRecordFolds rs
+                                )
+
 -- | Apply a constrained endo-fold to all fields of a record.
 -- May require a use of TypeApplications, e.g., foldAllConstrained @Num FL.sum
 foldAllConstrained
-  :: forall c rs
-   . ( V.RPureConstrained (ConstrainedField c) rs
-     , V.RPureConstrained V.KnownField rs
-     , V.RApply rs
-     , EndoFieldFoldsToRecordFolds rs
-     )
+  :: forall c rs. ConstrainedFoldable c rs
   => (forall a . c a => FL.Fold a a)
   -> FL.Fold (F.Record rs) (F.Record rs)
 foldAllConstrained f =
   sequenceEndoFolds $ V.rpureConstrained @(ConstrainedField c) (FoldEndo f)
 {-# INLINABLE foldAllConstrained #-}
+
+
 
 -- | Given a monoid-wrapper, e.g., Sum, and functions to wrap and unwrap, we can produce an endo-fold on a
 monoidWrapperToFold
