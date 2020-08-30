@@ -60,7 +60,6 @@ import           Control.MapReduce                 -- for re-export
 
 import qualified Control.Foldl                 as FL
 import qualified Data.Hashable                 as Hash
-import           Data.Hashable                  ( Hashable )
 
 import qualified Frames                        as F
 import qualified Frames.Melt                   as F
