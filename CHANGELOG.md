@@ -1,5 +1,8 @@
 v 0.4.0.0 
 * Added ```splitOnData``` for assigning via a given set of data cols.
+* Bumped upper bounds
+* Checked compilation w/ghc-8.10.2
+* Fixed a redundant include warning for Monoid using CPP in Frames.Folds
 
 v 0.3.0.0
 * Added Combinator for aggregation in Frames.Aggregation along with helpers to create folds over data cols, promote simple functions to
