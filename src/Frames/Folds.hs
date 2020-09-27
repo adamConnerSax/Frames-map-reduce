@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# LANGUAGE ConstraintKinds       #-}
+{-# LANGUAGE CPP                   #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE FlexibleContexts      #-}
@@ -60,9 +61,11 @@ where
 
 import qualified Control.Foldl                 as FL
 import qualified Control.Newtype               as N
-import           Data.Monoid                    ( (<>)
-                                                , Monoid(..)
-                                                )
+#if MIN_VERSION_base(4,11,0)
+#else  
+import           Data.Monoid                    ( (<>) )
+import           Data.Monoid                    ( Monoid(..))
+#endif
 import qualified Data.Profunctor               as P
 import qualified Data.Vinyl                    as V
 import qualified Data.Vinyl.TypeLevel          as V
