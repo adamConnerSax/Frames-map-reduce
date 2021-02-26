@@ -19,7 +19,7 @@
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
 {-|
 Module      : Frames.Aggregation
-Description : A specialised Map/Reduce for aggregating one set of keys to a smaller one given some operation to merge data. 
+Description : A specialised Map/Reduce for aggregating one set of keys to a smaller one given some operation to merge data.
 Copyright   : (c) Adam Conner-Sax 2019
 License     : BSD
 Maintainer  : adam_conner_sax@yahoo.com
@@ -32,8 +32,11 @@ build the data-set with the simpler key, while perhaps leaving some other column
 -}
 module Frames.Aggregation
   (
-    -- * Type-alias for maps from one record key to another
+    -- * Types
     RecordKeyMap
+    -- * Constraint Helpers
+  , AggregateAllC
+  , AggregateC
     -- * Aggregation Function combinators
   , combineKeyAggregations
   , keyMap
@@ -60,7 +63,7 @@ type RecordKeyMap k k' = F.Record k -> F.Record k'
 
 -- | Combine 2 key aggregation functions over disjoint columns.
 combineKeyAggregations
-  :: (a F.⊆ (a V.++ b), b F.⊆ (a V.++ b), F.Disjoint a' b' ~ 'True)
+  :: forall a a' b b'.(a F.⊆ (a V.++ b), b F.⊆ (a V.++ b), F.Disjoint a' b' ~ 'True)
   => RecordKeyMap a a'
   -> RecordKeyMap b b'
   -> RecordKeyMap (a V.++ b) (a' V.++ b')
@@ -75,6 +78,15 @@ keyMap
   => (V.Snd a -> V.Snd b)
   -> RecordKeyMap '[a] '[b]
 keyMap f r = f (F.rgetField @a r) F.&: V.RNil
+
+type AggregateAllC ak ak' d = ((ak' V.++ d) F.⊆ ((ak V.++ d) V.++ ak')
+                              , ak F.⊆ (ak V.++ d)
+                              , ak' F.⊆ (ak' V.++ d)
+                              , d F.⊆ (ak' V.++ d)
+                              , Ord (F.Record ak')
+                              , Ord (F.Record ak)
+                              , FI.RecVec (ak' V.++ d)
+                              )
 
 -- | Given some group keys in columns k,
 -- some keys to aggregate over in columns ak,
@@ -112,9 +124,25 @@ aggregateAllFold toAggKey aggDataF =
   in  FMR.concatFold
         $ FMR.mapReduceFold aggUnpack aggAssign (FMR.foldAndAddKey aggDataF)
 
--- | Aggregate key columns @ak@ into @ak'@ while leaving key columns @k@ along.
+type AggregateC k ak ak' d = (k F.⊆ (k V.++ ak)
+                             , ak F.⊆ (k V.++ ak)
+                             , F.Disjoint k ak' ~ 'True
+                             ,AggregateAllC (k V.++ ak) (k V.++ ak') d
+                             )
+
+-- | Aggregate key columns @ak@ into @ak'@ while leaving key columns @k@ alone.
 -- Allows aggregation over only some fields.  Will often require a typeapplication
 -- to specify what @k@ is.
+aggregateFold :: forall k ak ak' d.AggregateC k ak ak' d
+  => RecordKeyMap ak ak' -- ^ get aggregated key from key
+  -> (FL.Fold (F.Record d) (F.Record d)) -- ^ aggregate data
+  -> FL.Fold
+       (F.Record (k V.++ ak V.++ d))
+       (F.FrameRec (k V.++ ak' V.++ d))
+aggregateFold f = aggregateAllFold (combineKeyAggregations @k @k id f)
+
+
+{-
 aggregateFold
   :: forall k ak ak' d
    . ( (ak' V.++ d) F.⊆ ((ak V.++ d) V.++ ak')
@@ -142,7 +170,7 @@ aggregateFold keyAgg aggDataF = FMR.concatFold $ FMR.mapReduceFold
   ( FMR.makeRecsWithKey id
   $ MR.ReduceFold (const $ aggregateAllFold keyAgg aggDataF)
   )
-
+-}
 
 mergeDataFolds
   :: FL.Fold (F.Record d) (F.Record '[a])
