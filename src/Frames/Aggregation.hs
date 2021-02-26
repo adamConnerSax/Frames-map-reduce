@@ -37,6 +37,7 @@ module Frames.Aggregation
     -- * Constraint Helpers
   , AggregateAllC
   , AggregateC
+  , CombineKeyAggregationsC
     -- * Aggregation Function combinators
   , combineKeyAggregations
   , keyMap
@@ -61,9 +62,11 @@ import qualified Data.Vinyl.TypeLevel          as V
 -- | Type-alias for key aggregation functions.
 type RecordKeyMap k k' = F.Record k -> F.Record k'
 
+type CombineKeyAggregationsC a a' b b' = (a F.⊆ (a V.++ b), b F.⊆ (a V.++ b), F.Disjoint a' b' ~ 'True)
+
 -- | Combine 2 key aggregation functions over disjoint columns.
 combineKeyAggregations
-  :: forall a a' b b'.(a F.⊆ (a V.++ b), b F.⊆ (a V.++ b), F.Disjoint a' b' ~ 'True)
+  :: forall a a' b b'.CombineKeyAggregationsC a a' b b'
   => RecordKeyMap a a'
   -> RecordKeyMap b b'
   -> RecordKeyMap (a V.++ b) (a' V.++ b')
@@ -124,9 +127,7 @@ aggregateAllFold toAggKey aggDataF =
   in  FMR.concatFold
         $ FMR.mapReduceFold aggUnpack aggAssign (FMR.foldAndAddKey aggDataF)
 
-type AggregateC k ak ak' d = (k F.⊆ (k V.++ ak)
-                             , ak F.⊆ (k V.++ ak)
-                             , F.Disjoint k ak' ~ 'True
+type AggregateC k ak ak' d = (CombineKeyAggregationsC k k ak ak'
                              ,AggregateAllC (k V.++ ak) (k V.++ ak') d
                              )
 
