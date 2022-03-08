@@ -109,16 +109,24 @@ isoRecAppend lhs rhs =
     `V.rappend` (toRec @bs @record @f rhs)
 
 -- | This is only here so we can use hash maps for the grouping step.  This should properly be in Frames itself.
+#if MIN_VERSION_hashable(1,4,0)
+instance Eq (record (f :. ElField) '[]) => Hash.Hashable (record (f :. ElField)  '[]) where
+#else
 instance Hash.Hashable (record (f :. ElField)  '[]) where
+#endif
   hash = const 0
   {-# INLINABLE hash #-}
   hashWithSalt s = const s -- TODO: this seems BAD! Or not?
   {-# INLINABLE hashWithSalt #-}
 
+
 instance (V.KnownField t
          , Functor f
          , RecGetFieldC t record f (t ': rs)
          , RCastC rs (t ': rs) record f
+#if  MIN_VERSION_hashable(1,4,0)
+         , Eq (record (f :. ElField) (t ': rs))
+#endif
          , Hash.Hashable (f (V.Snd t))
          , Hash.Hashable (record (f :. ElField) rs)
          ) => Hash.Hashable (record (f :. ElField) (t ': rs)) where
