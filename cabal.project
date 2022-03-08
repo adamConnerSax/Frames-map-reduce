@@ -1,2 +1,3 @@
 packages: ./
-compiler: ghc
+-- ghc 9.2
+allow-newer: bytestring, vinyl

@@ -1,0 +1,7 @@
+cradle:
+  cabal:
+    - path: "./src"
+      component: "lib:Frames-map-reduce"
+
+    - path: "./examples"
+      component: "Frames-map-reduce:test:AddRowsByLabel"

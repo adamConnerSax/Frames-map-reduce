@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                   #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE FlexibleContexts      #-}
@@ -67,7 +68,17 @@ import qualified Frames.InCore                 as FI
 import qualified Data.Vinyl                    as V
 import qualified Data.Vinyl.TypeLevel          as V
 
+#if MIN_VERSION_base(4,16,0)
+import GHC.Generics (Generic, Rep)
+import Data.Hashable.Generic as Hash
+#endif
+
 -- | This is only here so we can use hash maps for the grouping step.  This should properly be in Frames itself.
+#if MIN_VERSION_base(4,16,0)
+instance (Generic (V.Rec V.ElField rs), Eq (V.Rec V.ElField rs), Hash.GHashable Hash.Zero (Rep (V.Rec V.ElField rs))) => Hash.Hashable (V.Rec V.ElField rs) where
+  hashWithSalt = Hash.genericHashWithSalt
+  {-# INLINEABLE hashWithSalt #-}
+#else
 instance Hash.Hashable (F.Record '[]) where
   hash = const 0
   {-# INLINABLE hash #-}
@@ -77,8 +88,8 @@ instance Hash.Hashable (F.Record '[]) where
 instance (V.KnownField t, Hash.Hashable (V.Snd t), Hash.Hashable (F.Record rs), rs F.⊆ (t ': rs)) => Hash.Hashable (F.Record (t ': rs)) where
   hashWithSalt s r = s `Hash.hashWithSalt` (F.rgetField @t r) `Hash.hashWithSalt` (F.rcast @rs r)
   {-# INLINABLE hashWithSalt #-}
-
--- | Filter records using a function on the entire record. 
+#endif
+-- | Filter records using a function on the entire record.
 unpackFilterRow
   :: (F.Record rs -> Bool) -> MR.Unpack (F.Record rs) (F.Record rs)
 unpackFilterRow test = MR.Filter test

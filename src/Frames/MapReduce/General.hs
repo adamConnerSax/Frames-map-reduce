@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# LANGUAGE ConstraintKinds       #-}
+{-# LANGUAGE CPP                   #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE FlexibleContexts      #-}
@@ -88,7 +89,11 @@ instance FS.Storable (V.Rec (f :. ElField) rs) => IsoRec rs V.SRec f where
 
 instance (V.NatToInt (V.RLength rs)
          , V.RecApplicative rs
-         , V.RPureConstrained (V.IndexableField rs) rs) => IsoRec rs V.ARec f where
+         , V.RPureConstrained (V.IndexableField rs) rs
+#if MIN_VERSION_vinyl(0,14,2)
+         , V.ToARec rs
+#endif
+         ) => IsoRec rs V.ARec f where
   toRec = V.fromARec
   fromRec = V.toARec
 
@@ -120,11 +125,11 @@ instance (V.KnownField t
   hashWithSalt s r = s `Hash.hashWithSalt` (rgetFieldF @t r) `Hash.hashWithSalt` (rcastF @rs r)
   {-# INLINABLE hashWithSalt #-}
 
--- | Don't do anything 
+-- | Don't do anything
 unpackNoOp :: MR.Unpack (record (f :. ElField) rs) (record (f :. ElField) rs)
 unpackNoOp = MR.Filter (const True)
 
--- | Filter records using a function on the entire record. 
+-- | Filter records using a function on the entire record.
 unpackFilterRow
   :: (record (f :. ElField) rs -> Bool)
   -> MR.Unpack (record (f :. ElField) rs) (record (f :. ElField) rs)
@@ -270,5 +275,3 @@ makeRecsWithKeyM makeRec reduceToY = MR.reduceMMapWithKey addKey reduceToY
  where
   addKey k = fmap (\y -> fromRec . V.rappend (toRec k) . toRec $ makeRec y)
 {-# INLINABLE makeRecsWithKeyM #-}
-
-
