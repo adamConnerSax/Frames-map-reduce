@@ -108,14 +108,7 @@ type AggregateAllC ak ak' d = ((ak' V.++ d) F.⊆ ((ak V.++ d) V.++ ak')
 -- perform a weighted-sum over the percentages.
 aggregateAllFold
   :: forall ak ak' d
-   . ( (ak' V.++ d) F.⊆ ((ak V.++ d) V.++ ak')
-     , ak F.⊆ (ak V.++ d)
-     , ak' F.⊆ (ak' V.++ d)
-     , d F.⊆ (ak' V.++ d)
-     , Ord (F.Record ak')
-     , Ord (F.Record ak)
-     , FI.RecVec (ak' V.++ d)
-     )
+   . AggregateAllC ak ak' d
   => RecordKeyMap ak ak' -- ^ get aggregated key from key
   -> (FL.Fold (F.Record d) (F.Record d)) -- ^ aggregate data
   -> FL.Fold (F.Record (ak V.++ d)) (F.FrameRec (ak' V.++ d))
