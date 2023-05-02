@@ -1,3 +1,6 @@
+v0.4.4.2
+* Bumped upper bounds in cabal
+
 v 0.4.1.1
 * Bumped some upper bounds
 
