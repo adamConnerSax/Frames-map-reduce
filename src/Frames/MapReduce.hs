@@ -51,13 +51,17 @@ module Frames.MapReduce
   , makeRecsWithKey
   , makeRecsWithKeyM
 
+  -- * Utilities
+  , concatFold
+  , concatFoldM
+
   -- * Re-Exports
   , module Control.MapReduce
   )
 where
 
 import qualified Control.MapReduce             as MR
-import           Control.MapReduce                 -- for re-export
+import           Control.MapReduce             hiding (concatFold, concatFoldM)
 
 import qualified Control.Foldl                 as FL
 import qualified Data.Hashable                 as Hash
@@ -184,3 +188,15 @@ makeRecsWithKeyM makeRec reduceToY = fmap F.toFrame
   $ MR.reduceMMapWithKey addKey reduceToY
   where addKey k = fmap (V.rappend k . makeRec)
 {-# INLINABLE makeRecsWithKeyM #-}
+
+
+-- | concatenate several frames into one
+--  The monoid instance in Frames is an issue (?) for doing this at scale
+--  The simple fold types return lists of results.  Often we want to merge these into some other structure via (<>)
+concatFold :: (Foldable g, Functor g, FI.RecVec r) => FL.Fold a (g (F.FrameRec r)) -> FL.Fold a (F.FrameRec r)
+concatFold = fmap (F.toFrame . concat . fmap (FL.fold FL.list))
+
+-- | The simple fold types return lists of results.  Often we want to merge these into some other structure via (<>)
+concatFoldM
+  :: (Monad m, Functor g, Foldable g, FI.RecVec r) => FL.FoldM m a (g (F.FrameRec r)) -> FL.FoldM m a (F.FrameRec r)
+concatFoldM = fmap (F.toFrame . concat . fmap (FL.fold FL.list))

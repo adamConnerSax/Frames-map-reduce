@@ -1,2 +1,7 @@
 packages: ./
 allow-newer: Frames:base, Frames:ghc-prim
+
+source-repository-package
+  type: git
+  location: https://github.com/adamConnerSax/map-reduce-folds
+  tag: d5f83c524a3503a8d64694dc070ab3ad72c2f9a9
