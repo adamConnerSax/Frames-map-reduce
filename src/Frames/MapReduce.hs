@@ -64,6 +64,7 @@ import qualified Control.MapReduce             as MR
 import           Control.MapReduce             hiding (concatFold, concatFoldM)
 
 import qualified Control.Foldl                 as FL
+import           Data.Foldable                 (toList)
 import qualified Data.Hashable                 as Hash
 
 import qualified Frames                        as F
@@ -190,13 +191,21 @@ makeRecsWithKeyM makeRec reduceToY = fmap F.toFrame
 {-# INLINABLE makeRecsWithKeyM #-}
 
 
+frameConcat :: (Functor f, Foldable f, FI.RecVec rs) => f (F.FrameRec rs) -> F.FrameRec rs
+frameConcat x = if length x < 600
+                then mconcat $ toList x
+                else F.toFrame $ concatMap toList x
+{-# INLINEABLE frameConcat #-}
+
 -- | concatenate several frames into one
 --  The monoid instance in Frames is an issue (?) for doing this at scale
 --  The simple fold types return lists of results.  Often we want to merge these into some other structure via (<>)
 concatFold :: (Foldable g, Functor g, FI.RecVec r) => FL.Fold a (g (F.FrameRec r)) -> FL.Fold a (F.FrameRec r)
-concatFold = fmap (F.toFrame . concat . fmap (FL.fold FL.list))
+concatFold = fmap frameConcat
+{-# INLINEABLE concatFold #-}
 
 -- | The simple fold types return lists of results.  Often we want to merge these into some other structure via (<>)
 concatFoldM
   :: (Monad m, Functor g, Foldable g, FI.RecVec r) => FL.FoldM m a (g (F.FrameRec r)) -> FL.FoldM m a (F.FrameRec r)
-concatFoldM = fmap (F.toFrame . concat . fmap (FL.fold FL.list))
+concatFoldM = fmap frameConcat --(F.toFrame . concat . fmap (FL.fold FL.list))
+{-# INLINEABLE concatFoldM #-}
